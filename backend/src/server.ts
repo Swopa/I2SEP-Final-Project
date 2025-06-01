@@ -1,13 +1,16 @@
 
+import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid'; 
 import { Assignment } from './models/assignment.model'; 
 import { readAssignmentsFromFile, writeAssignmentsToFile, readNotesFromFile, writeNotesToFile } from './fileStore'; 
 import { Note } from './models/note.model';
 
+
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
+app.use(cors()); 
 app.use(express.json()); // Middleware to parse JSON request bodies
 
 
