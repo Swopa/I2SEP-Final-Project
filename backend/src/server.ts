@@ -144,7 +144,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 
 // Initialize assignments and then start listening
-initializeAssignments().then(() => {
+Promise.all([initializeAssignments(), initializeNotes()]).then(() => {
   app.listen(PORT, () => {
     console.log(`Backend server is running on http://localhost:${PORT}`);
     console.log('Available routes:');
