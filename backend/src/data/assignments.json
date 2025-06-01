@@ -1,0 +1,14 @@
+[
+  {
+    "id": "dffb91de-e5f3-4932-b51b-3ed3b0328627",
+    "title": "Submit History Essay",
+    "course": "World History",
+    "deadline": "2024-09-10T23:59:00.000Z"
+  },
+  {
+    "id": "42e45034-e3d6-481f-a7c4-a0485942087b",
+    "title": "Prepare Math Presentation",
+    "course": "Calculus III",
+    "deadline": "2024-09-15T12:00:00.000Z"
+  }
+]
