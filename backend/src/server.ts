@@ -2,12 +2,15 @@
 import express, { Express, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid'; 
 import { Assignment } from './models/assignment.model'; 
-import { readAssignmentsFromFile, writeAssignmentsToFile } from './fileStore'; 
+import { readAssignmentsFromFile, writeAssignmentsToFile, readNotesFromFile, writeNotesToFile } from './fileStore'; 
+import { Note } from './models/note.model';
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 app.use(express.json()); // Middleware to parse JSON request bodies
+
+
 
 // In-memory store for assignments, which will be synchronized with the file
 let assignments: Assignment[] = [];
@@ -21,6 +24,17 @@ const initializeAssignments = async () => {
     console.error('Failed to initialize assignments from file:', error);
     // Decide if server should start with empty assignments or handle error differently
     assignments = [];
+  }
+};
+
+let notes: Note[] = [];
+const initializeNotes = async () => {
+  try {
+    notes = await readNotesFromFile();
+    console.log(`Successfully loaded ${notes.length} notes from file.`);
+  } catch (error) {
+    console.error('Failed to initialize notes from file:', error);
+    notes = [];
   }
 };
 
@@ -74,6 +88,49 @@ app.post('/assignments', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/notes', (req: Request, res: Response) => {
+  res.status(200).json(notes);
+});
+
+// POST /notes - Create a new note
+app.post('/notes', async (req: Request, res: Response) => {
+  try {
+    const { course, title, content, link } = req.body;
+
+    // Basic validation
+    if (!course || !title || !content) {
+      return res.status(400).json({ message: 'Missing required fields: course, title, and content are required.' });
+    }
+    if (typeof course !== 'string' || typeof title !== 'string' || typeof content !== 'string') {
+        return res.status(400).json({ message: 'Invalid data types for required note fields.' });
+    }
+    if (link && typeof link !== 'string') { // Validate link only if provided
+        return res.status(400).json({ message: 'Invalid data type for link.' });
+    }
+
+    const newNote: Note = {
+      id: uuidv4(),
+      course,
+      title,
+      content,
+      link: link || undefined, // Ensure link is undefined if not provided or empty
+      createdAt: new Date().toISOString(), // Set creation timestamp
+    };
+
+    notes.push(newNote);
+    await writeNotesToFile(notes); // Persist to notes.json
+
+    res.status(201).json(newNote);
+  } catch (error) {
+    console.error('Error creating note:', error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to create note.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'Failed to create note due to an unknown error.' });
+    }
+  }
+});
+
 // --- Health-check endpoint 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
@@ -91,6 +148,8 @@ initializeAssignments().then(() => {
     console.log('  GET  /health');
     console.log('  GET  /assignments');
     console.log('  POST /assignments');
+    console.log('  GET  /notes');
+    console.log('  POST /notes');
   });
 }).catch(error => {
     console.error("Failed to start the server due to an error during initialization:", error);
