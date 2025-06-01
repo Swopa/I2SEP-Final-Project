@@ -1,0 +1,13 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "concurrently \"tsc -w\" \"nodemon dist/server.js\"",
+    "dev:ts-node": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts"
+  },
+  
+}
