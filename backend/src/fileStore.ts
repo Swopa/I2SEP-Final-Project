@@ -1,6 +1,7 @@
 import fs from 'fs/promises'; 
 import path from 'path';
 import { Assignment } from './models/assignment.model'; 
+import { Note } from './models/note.model'; 
 
 // Determine the correct base path depending on execution context (ts-node vs. compiled)
 // __dirname in a .ts file run by ts-node is the directory of the .ts file (e.g., backend/src)
@@ -53,5 +54,31 @@ export const writeAssignmentsToFile = async (assignments: Assignment[]): Promise
     await fs.writeFile(assignmentsFilePath, jsonData, 'utf8');
   } catch (error) {
     console.error('Error writing assignments to file:', error);
+  }
+};
+
+const notesFilePath = path.join(dataDir, 'notes.json'); // <--- DEFINE NOTES FILE PATH
+
+// Function to read notes from the JSON file
+export const readNotesFromFile = async (): Promise<Note[]> => {
+  await ensureDataFile(notesFilePath); // Ensure notes.json exists
+  try {
+    const fileContents = await fs.readFile(notesFilePath, 'utf8');
+    if (fileContents.trim() === '') return [];
+    return JSON.parse(fileContents) as Note[];
+  } catch (error) {
+    console.error('Error reading notes from file:', error);
+    return [];
+  }
+};
+
+// Function to write notes to the JSON file
+export const writeNotesToFile = async (notes: Note[]): Promise<void> => {
+  await ensureDataFile(notesFilePath); // Ensure notes.json exists
+  try {
+    const jsonData = JSON.stringify(notes, null, 2);
+    await fs.writeFile(notesFilePath, jsonData, 'utf8');
+  } catch (error) {
+    console.error('Error writing notes to file:', error);
   }
 };
