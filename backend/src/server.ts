@@ -1,6 +1,5 @@
 // backend/src/server.ts
-import cors from "cors";
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response,  NextFunction } from "express";
 import sqlite3 from "sqlite3"; // To type the 'db' variable
 import { User, UserProfile } from "./models/user.model"; // Import User and UserProfile
 import {
@@ -28,6 +27,11 @@ import {
   initializeCourseTable,
 } from "./database";
 
+import dotenv from 'dotenv';
+dotenv.config();
+
+import cors from "cors";
+
 // Model imports - These will be used more extensively as DB interactions are built
 // import { User } from './models/user.model';
 // import { Assignment } from './models/assignment.model';
@@ -40,6 +44,36 @@ const PORT: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 // --- Global Middleware ---
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Middleware to parse JSON request bodies
+
+
+
+
+// Basic Request Logger Middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  res.on('finish', () => { // Event emitted when response is sent
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+  });
+  next();
+});
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error("Global Error Handler Caught:", err.stack || err); // Log the full error stack
+
+  // Avoid sending detailed stack traces in production for security
+  const isProduction = process.env.NODE_ENV === 'production';
+  const statusCode = (err as any).statusCode || 500; // Use error's status code or default to 500
+  const message = (err as any).expose // For errors from 'http-errors' library or similar
+                  ? err.message
+                  : (isProduction && statusCode === 500 ? 'An unexpected internal server error occurred.' : err.message);
+
+  res.status(statusCode).json({
+    message: message,
+    // Optionally include stack in development
+    ...( !isProduction && { stack: err.stack } )
+  });
+});
 
 // --- Database Instance ---
 // This will hold our database connection instance once initialized.

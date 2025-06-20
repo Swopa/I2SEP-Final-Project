@@ -41,3 +41,6 @@ backend/dist/data/nerv.sqlite
 # Or more generally, if 'data' directories only contain runtime data
 backend/src/data/
 backend/dist/data/
+
+.env
+backend/.env
