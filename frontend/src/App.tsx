@@ -1,8 +1,7 @@
-// frontend/src/App.tsx
-
 import React, { useState, useEffect } from 'react';
 import type { Assignment, Note } from './types'; // Import types using 'type-only' import
 import './App.css'; // Import the CSS file
+import { useAuth } from './context/AuthContext';
 
 // Base URL for your backend API - IMPORTANT: No '/api' prefix, as per your backend
 const API_BASE_URL = 'http://localhost:3001';
@@ -135,11 +134,24 @@ function App() {
     }
   };
 
+  const { isAuthenticated, user, login, logout } = useAuth();
+
+   const handleTestLogin = async () => {
+    await login('test@example.com', 'password123');
+  };
+
+  const handleTestLogout = () => {
+    logout();
+  };
+  // --- End Temporary Test ---
+
   // --- Fetch data on component mount ---
   useEffect(() => {
     fetchAssignments();
     fetchNotes();
   }, []);
+
+  
 
   return (
     <div className="App">
@@ -149,6 +161,19 @@ function App() {
             <span role="img" aria-label="Books">📚</span> Academic Hub
           </h1>
           <p className="app-tagline">Your personal dashboard for schoolwork & notes.</p>
+          <div style={{ marginTop: '10px', fontSize: '0.9em', color: 'rgba(255,255,255,0.9)' }}>
+            {isAuthenticated ? (
+              <>
+                Logged in as: {user?.email}
+                <button onClick={handleTestLogout} style={{ marginLeft: '10px', padding: '5px 10px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Logout</button>
+              </>
+            ) : (
+              <>
+                Not logged in
+                <button onClick={handleTestLogin} style={{ marginLeft: '10px', padding: '5px 10px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Test Login</button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
