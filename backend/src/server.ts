@@ -3,6 +3,7 @@ import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import sqlite3 from 'sqlite3'; // To type the 'db' variable
 
+
 // Database related imports
 import { getDbConnection, closeDbConnection, initializeUserTable } from './database';
 
