@@ -7,6 +7,8 @@ import { hashPassword, generateToken, comparePassword } from "./utils/auth.utils
 import { findUserByEmail, createUser } from "./services/user.service"; // Import user service functions
 import { v4 as uuidv4 } from "uuid";
 import { authenticateToken } from './middleware/auth.middleware';
+import { Course, NewCourseData } from './models/course.model'; // <--- ADD/ENSURE THIS
+import { createCourseDb, getCoursesByUserIdDb } from './services/course.service';
 
 // Database related imports
 import {
@@ -44,6 +46,8 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
+
+// ------Sign up Endpoint
 app.post("/auth/signup", async (req: Request, res: Response) => {
   if (!db) {
     // Ensure db instance is available
@@ -111,6 +115,8 @@ app.post("/auth/signup", async (req: Request, res: Response) => {
   }
 });
 
+
+//----- Log in Endpoint
 app.post("/auth/login", async (req: Request, res: Response) => {
   if (!db) {
     return res.status(503).json({ message: "Database service unavailable." });
@@ -158,9 +164,66 @@ app.post("/auth/login", async (req: Request, res: Response) => {
   }
 });
 
-// TODO: Course endpoints (Task A10 stub, then full CRUD by Dev A/C) will be added here:
-// app.post('/courses', ...);
-// app.get('/courses', ...);
+
+//----- Courses Endpoint
+
+// POST /courses - Create a new course for the authenticated user
+app.post('/courses', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) {
+    return res.status(503).json({ message: 'Database service unavailable.' });
+  }
+  if (!req.user) { // Should be populated by authenticateToken
+    return res.status(401).json({ message: 'Unauthorized (user not found in request).' });
+  }
+
+  try {
+    const { title } = req.body as NewCourseData; // Get title from request body
+
+    // Basic Validation
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ message: 'Course title is required and must be a non-empty string.' });
+    }
+
+    const userId = req.user.userId; // Get userId from the authenticated user (JWT payload)
+
+    const newCourse = await createCourseDb(db, userId, { title });
+
+    res.status(201).json(newCourse);
+
+  } catch (error) {
+    console.error('Error creating course:', error);
+    // Check for specific DB errors if needed, e.g., unique constraints on (userId, title) if you add them
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to create course.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while creating the course.' });
+    }
+  }
+});
+
+// GET /courses - Retrieve all courses for the authenticated user
+app.get('/courses', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) {
+    return res.status(503).json({ message: 'Database service unavailable.' });
+  }
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized (user not found in request).' });
+  }
+
+  try {
+    const userId = req.user.userId;
+    const userCourses = await getCoursesByUserIdDb(db, userId);
+    res.status(200).json(userCourses);
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to fetch courses.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while fetching courses.' });
+    }
+  }
+});
+
 
 // TODO: Assignment endpoints (to be re-implemented by Dev C using 'db')
 /*
@@ -185,6 +248,8 @@ app.post('/notes', async (req: Request, res: Response) => {
   res.status(501).json({ message: 'Notes POST Not Implemented with DB yet' });
 });
 */
+
+//------- End of Endpoints
 
 // --- Server Startup Function ---
 const startServer = async () => {
@@ -215,6 +280,10 @@ const startServer = async () => {
       console.log(`Backend server is running on http://localhost:${PORT}`);
       console.log("Available basic routes:");
       console.log("  GET  /health");
+      console.log('  POST /auth/signup');
+      console.log('  POST /auth/login');
+      console.log('  POST /courses (Protected)'); 
+      console.log('  GET  /courses (Protected)');
       // Add other routes to this log as they become functional
     });
 
@@ -280,17 +349,7 @@ app.get('/api/test-protected', authenticateToken, (req: Request, res: Response) 
 });
 */
 
-// Apply to the stubbed /courses POST route (from Task A10 plan)
-// This route will be fully implemented in Task A13
-app.post('/courses', authenticateToken, async (req: Request, res: Response) => {
-    // For now, just confirm middleware worked and user info is available
-    console.log('POST /courses accessed by user:', req.user);
-    // const { title } = req.body; // You'll use this when implementing full course creation
-    res.status(200).json({ 
-        message: `Stub for POST /courses reached by user ${req.user?.userId}`,
-        // receivedBody: req.body // Optional: echo back body for testing
-    });
-});
+
 
 
 
