@@ -1,19 +1,42 @@
-import React from 'react';
-import { Link } from 'react-router-dom'; 
+import React, { useState } from 'react'; 
+import { Link, useNavigate } from 'react-router-dom'; 
 import '../../App.css'; 
+import { login } from '../../services/AuthService'; 
+import { useAuth } from '../../context/AuthContext'; 
 
 const LoginPage: React.FC = () => {
-  // Placeholder state for inputs (will be updated in a later task - B7)
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [email, setEmail] = useState<string>(''); 
+  const [password, setPassword] = useState<string>(''); 
+  const [isLoading, setIsLoading] = useState<boolean>(false); 
+  const [error, setError] = useState<string | null>(null); 
 
-  // Placeholder submission handler (will be updated in a later task - B7)
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault(); // Prevent default form submission
-    console.log('Login form submitted (stubbed)!');
-    console.log('Email:', email);
-    console.log('Password:', password);
-    // No API call or actual login logic here yet
+  const navigate = useNavigate(); 
+  const { login: authContextLogin } = useAuth(); 
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); 
+
+    setError(null); 
+    setIsLoading(true); 
+
+    try {
+      const response = await login(email, password);
+      if (response.success && response.user && response.token) {
+        console.log('Login successful!', response.message);
+        await authContextLogin(email, password); 
+
+        navigate('/dashboard'); 
+      } else {
+        // If login failed, set the error message
+        setError(response.message || 'Login failed. Please check your credentials.');
+        console.error('Login failed:', response.message);
+      }
+    } catch (err) {
+      console.error('An unexpected error occurred during login:', err);
+      setError('An unexpected error occurred. Please try again later.');
+    } finally {
+      setIsLoading(false); // Reset loading state
+    }
   };
 
   return (
@@ -33,6 +56,7 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="form-input"
+              disabled={isLoading} // Disable inputs when loading
             />
           </div>
 
@@ -46,10 +70,15 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="form-input"
+              disabled={isLoading} // Disable inputs when loading
             />
           </div>
 
-          <button type="submit" className="btn btn-primary auth-btn">Log In</button>
+          {error && <p className="error-message">{error}</p>} {/* Display error message */}
+
+          <button type="submit" className="btn btn-primary auth-btn" disabled={isLoading}>
+            {isLoading ? 'Logging In...' : 'Log In'}
+          </button>
         </form>
 
         <p className="auth-link-text">
