@@ -3,19 +3,29 @@ import cors from "cors";
 import express, { Express, Request, Response } from "express";
 import sqlite3 from "sqlite3"; // To type the 'db' variable
 import { User, UserProfile } from "./models/user.model"; // Import User and UserProfile
-import { hashPassword, generateToken, comparePassword } from "./utils/auth.utils"; // Import your auth utils
+import {
+  hashPassword,
+  generateToken,
+  comparePassword,
+} from "./utils/auth.utils"; // Import your auth utils
 import { findUserByEmail, createUser } from "./services/user.service"; // Import user service functions
 import { v4 as uuidv4 } from "uuid";
-import { authenticateToken } from './middleware/auth.middleware';
-import { Course, NewCourseData } from './models/course.model'; // <--- ADD/ENSURE THIS
-import { createCourseDb, getCoursesByUserIdDb } from './services/course.service';
+import { authenticateToken } from "./middleware/auth.middleware";
+import { Course, NewCourseData } from "./models/course.model";
+import {
+  createCourseDb,
+  getCoursesByUserIdDb,
+  getCourseByIdAndUserIdDb,
+  updateCourseTitleDb,
+  deleteCourseDb,
+} from "./services/course.service";
 
 // Database related imports
 import {
   getDbConnection,
   closeDbConnection,
   initializeUserTable,
-  initializeCourseTable
+  initializeCourseTable,
 } from "./database";
 
 // Model imports - These will be used more extensively as DB interactions are built
@@ -46,16 +56,13 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-
 // ------Sign up Endpoint
 app.post("/auth/signup", async (req: Request, res: Response) => {
   if (!db) {
     // Ensure db instance is available
-    return res
-      .status(503)
-      .json({
-        message: "Database service unavailable. Please try again later.",
-      });
+    return res.status(503).json({
+      message: "Database service unavailable. Please try again later.",
+    });
   }
 
   try {
@@ -115,7 +122,6 @@ app.post("/auth/signup", async (req: Request, res: Response) => {
   }
 });
 
-
 //----- Log in Endpoint
 app.post("/auth/login", async (req: Request, res: Response) => {
   if (!db) {
@@ -164,24 +170,30 @@ app.post("/auth/login", async (req: Request, res: Response) => {
   }
 });
 
-
 //----- Courses Endpoint
 
 // POST /courses - Create a new course for the authenticated user
-app.post('/courses', authenticateToken, async (req: Request, res: Response) => {
+app.post("/courses", authenticateToken, async (req: Request, res: Response) => {
   if (!db) {
-    return res.status(503).json({ message: 'Database service unavailable.' });
+    return res.status(503).json({ message: "Database service unavailable." });
   }
-  if (!req.user) { // Should be populated by authenticateToken
-    return res.status(401).json({ message: 'Unauthorized (user not found in request).' });
+  if (!req.user) {
+    // Should be populated by authenticateToken
+    return res
+      .status(401)
+      .json({ message: "Unauthorized (user not found in request)." });
   }
 
   try {
     const { title } = req.body as NewCourseData; // Get title from request body
 
     // Basic Validation
-    if (!title || typeof title !== 'string' || title.trim() === '') {
-      return res.status(400).json({ message: 'Course title is required and must be a non-empty string.' });
+    if (!title || typeof title !== "string" || title.trim() === "") {
+      return res
+        .status(400)
+        .json({
+          message: "Course title is required and must be a non-empty string.",
+        });
     }
 
     const userId = req.user.userId; // Get userId from the authenticated user (JWT payload)
@@ -189,25 +201,32 @@ app.post('/courses', authenticateToken, async (req: Request, res: Response) => {
     const newCourse = await createCourseDb(db, userId, { title });
 
     res.status(201).json(newCourse);
-
   } catch (error) {
-    console.error('Error creating course:', error);
+    console.error("Error creating course:", error);
     // Check for specific DB errors if needed, e.g., unique constraints on (userId, title) if you add them
     if (error instanceof Error) {
-        res.status(500).json({ message: 'Failed to create course.', error: error.message });
+      res
+        .status(500)
+        .json({ message: "Failed to create course.", error: error.message });
     } else {
-        res.status(500).json({ message: 'An unknown error occurred while creating the course.' });
+      res
+        .status(500)
+        .json({
+          message: "An unknown error occurred while creating the course.",
+        });
     }
   }
 });
 
 // GET /courses - Retrieve all courses for the authenticated user
-app.get('/courses', authenticateToken, async (req: Request, res: Response) => {
+app.get("/courses", authenticateToken, async (req: Request, res: Response) => {
   if (!db) {
-    return res.status(503).json({ message: 'Database service unavailable.' });
+    return res.status(503).json({ message: "Database service unavailable." });
   }
   if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized (user not found in request).' });
+    return res
+      .status(401)
+      .json({ message: "Unauthorized (user not found in request)." });
   }
 
   try {
@@ -215,17 +234,138 @@ app.get('/courses', authenticateToken, async (req: Request, res: Response) => {
     const userCourses = await getCoursesByUserIdDb(db, userId);
     res.status(200).json(userCourses);
   } catch (error) {
-    console.error('Error fetching courses:', error);
+    console.error("Error fetching courses:", error);
     if (error instanceof Error) {
-        res.status(500).json({ message: 'Failed to fetch courses.', error: error.message });
+      res
+        .status(500)
+        .json({ message: "Failed to fetch courses.", error: error.message });
     } else {
-        res.status(500).json({ message: 'An unknown error occurred while fetching courses.' });
+      res
+        .status(500)
+        .json({ message: "An unknown error occurred while fetching courses." });
+    }
+  }
+});
+
+// GET /courses/:courseId - Retrieve a specific course for the authenticated user
+app.get(
+  "/courses/:courseId",
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    if (!db) {
+      return res.status(503).json({ message: "Database service unavailable." });
+    }
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized." }); // Should not happen if authenticateToken works
+    }
+
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.userId;
+
+      const course = await getCourseByIdAndUserIdDb(db, courseId, userId);
+
+      if (!course) {
+        return res
+          .status(404)
+          .json({ message: "Course not found or access denied." });
+      }
+
+      res.status(200).json(course);
+    } catch (error) {
+      console.error(`Error fetching course ${req.params.courseId}:`, error);
+      if (error instanceof Error) {
+        res
+          .status(500)
+          .json({ message: "Failed to fetch course.", error: error.message });
+      } else {
+        res
+          .status(500)
+          .json({
+            message: "An unknown error occurred while fetching the course.",
+          });
+      }
+    }
+  }
+);
+
+// PUT /courses/:courseId - Update a specific course for the authenticated user
+app.put('/courses/:courseId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) {
+    return res.status(503).json({ message: 'Database service unavailable.' });
+  }
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+
+  try {
+    const { courseId } = req.params;
+    const { title: newTitle } = req.body as { title: string }; // Expecting only title for update now
+    const userId = req.user.userId;
+
+    // Basic Validation for newTitle
+    if (!newTitle || typeof newTitle !== 'string' || newTitle.trim() === '') {
+      return res.status(400).json({ message: 'New course title is required and must be a non-empty string.' });
+    }
+
+    const updatedCourse = await updateCourseTitleDb(db, courseId, userId, newTitle);
+
+    if (!updatedCourse) {
+      // This means either the course wasn't found for that user, or no changes were made (e.g. title was the same)
+      // For a PUT, if the resource doesn't exist for the user, 404 is appropriate.
+      // If it exists but title is same, some might return 200 with old obj, or 304 Not Modified,
+      // but for simplicity, if our service returns null, we'll assume not found/not owned.
+      return res.status(404).json({ message: 'Course not found, not owned by user, or no changes made.' });
+    }
+
+    res.status(200).json(updatedCourse);
+
+  } catch (error) {
+    console.error(`Error updating course ${req.params.courseId}:`, error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to update course.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while updating the course.' });
     }
   }
 });
 
 
-// TODO: Assignment endpoints (to be re-implemented by Dev C using 'db')
+// DELETE /courses/:courseId - Delete a specific course for the authenticated user
+app.delete('/courses/:courseId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) {
+    return res.status(503).json({ message: 'Database service unavailable.' });
+  }
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.userId;
+
+    const wasDeleted = await deleteCourseDb(db, courseId, userId);
+
+    if (!wasDeleted) {
+      // Course not found for that user or already deleted
+      return res.status(404).json({ message: 'Course not found or access denied.' });
+    }
+
+    // Successfully deleted
+    res.status(204).send(); // 204 No Content is typical for successful DELETE
+
+  } catch (error) {
+    console.error(`Error deleting course ${req.params.courseId}:`, error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to delete course.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while deleting the course.' });
+    }
+  }
+});
+
+
+// TODO: Assignment endpoints (to be re-implemented using 'db')
 /*
 app.get('/assignments', (req: Request, res: Response) => {
   // Example: if (!db) return res.status(503).send('Database not ready');
@@ -280,10 +420,10 @@ const startServer = async () => {
       console.log(`Backend server is running on http://localhost:${PORT}`);
       console.log("Available basic routes:");
       console.log("  GET  /health");
-      console.log('  POST /auth/signup');
-      console.log('  POST /auth/login');
-      console.log('  POST /courses (Protected)'); 
-      console.log('  GET  /courses (Protected)');
+      console.log("  POST /auth/signup");
+      console.log("  POST /auth/login");
+      console.log("  POST /courses (Protected)");
+      console.log("  GET  /courses (Protected)");
       // Add other routes to this log as they become functional
     });
 
@@ -338,7 +478,6 @@ const startServer = async () => {
   }
 };
 
-
 /* ---- Testing for middleware
 app.get('/api/test-protected', authenticateToken, (req: Request, res: Response) => {
   // If middleware passes, req.user will be populated
@@ -348,10 +487,6 @@ app.get('/api/test-protected', authenticateToken, (req: Request, res: Response) 
   });
 });
 */
-
-
-
-
 
 // --- Actually Start the Server ---
 startServer();
