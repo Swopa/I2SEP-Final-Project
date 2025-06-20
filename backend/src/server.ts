@@ -13,6 +13,7 @@ import {
   getDbConnection,
   closeDbConnection,
   initializeUserTable,
+  initializeCourseTable
 } from "./database";
 
 // Model imports - These will be used more extensively as DB interactions are built
@@ -200,6 +201,7 @@ const startServer = async () => {
     // 2. Initialize Database Schema (Create tables if they don't exist)
     //    The 'db' variable is guaranteed to be non-null here.
     await initializeUserTable(db);
+    await initializeCourseTable(db);
     // TODO (in later tasks):
     // await initializeCourseTable(db);
     // await initializeAssignmentTable(db);
