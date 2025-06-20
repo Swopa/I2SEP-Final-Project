@@ -2,6 +2,13 @@
 import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import sqlite3 from 'sqlite3'; // To type the 'db' variable
+import { User, UserProfile } from './models/user.model'; // Import User and UserProfile
+import { hashPassword, generateToken } from './utils/auth.utils'; // Import your auth utils
+import { findUserByEmail, createUser } from './services/user.service'; // Import user service functions
+import { comparePassword} from './utils/auth.utils';
+import { v4 as uuidv4 } from 'uuid';
+
+
 
 
 // Database related imports
@@ -35,9 +42,108 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// TODO: Auth endpoints (Tasks A6, A7) will be added here:
-// app.post('/auth/signup', ...);
-// app.post('/auth/login', ...);
+app.post('/auth/signup', async (req: Request, res: Response) => {
+  if (!db) { // Ensure db instance is available
+    return res.status(503).json({ message: 'Database service unavailable. Please try again later.' });
+  }
+
+  try {
+    const { email, password } = req.body;
+
+    // 1. Basic Validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+    // Add more validation (e.g., email format, password strength) as needed
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format.' });
+    }
+    if (password.length < 6) { // Example: minimum password length
+        return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+    }
+
+
+    // 2. Check if user already exists
+    const existingUser = await findUserByEmail(db, email);
+    if (existingUser) {
+      return res.status(409).json({ message: 'Email already in use.' }); // 409 Conflict
+    }
+
+    // 3. Hash the password
+    const passwordHash = await hashPassword(password);
+
+    // 4. Create new user in the database
+    const newUser = await createUser(db, { email, passwordHash });
+
+    // 5. Generate JWT
+    // Ensure the object passed to generateToken matches Pick<User, 'id' | 'email'>
+    const token = generateToken({ id: newUser.id, email: newUser.email });
+
+    // 6. Respond (don't send back passwordHash)
+    const userProfile: UserProfile = { // Use UserProfile type
+        id: newUser.id,
+        email: newUser.email,
+        createdAt: newUser.createdAt,
+    };
+
+    res.status(201).json({ token, user: userProfile });
+
+  } catch (error: any) { // Catch block with 'any' or 'unknown' for error
+    if (error.message === 'EmailAlreadyExists') { // Custom error from createUser
+        return res.status(409).json({ message: 'Email already in use.' });
+    }
+    console.error('Signup error:', error);
+    res.status(500).json({ message: 'An error occurred during signup.' });
+  }
+});
+
+
+app.post('/auth/login', async (req: Request, res: Response) => {
+  if (!db) {
+    return res.status(503).json({ message: 'Database service unavailable.' });
+  }
+
+  try {
+    const { email, password } = req.body;
+
+    // 1. Basic Validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    // 2. Find user by email
+    const user = await findUserByEmail(db, email);
+    if (!user) {
+      // User not found - generic message for security (don't reveal if email exists or not)
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    // 3. Compare password
+    const isPasswordMatch = await comparePassword(password, user.passwordHash);
+    if (!isPasswordMatch) {
+      // Password does not match - generic message
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    // 4. Generate JWT
+    // Ensure the object passed to generateToken matches Pick<User, 'id' | 'email'>
+    const token = generateToken({ id: user.id, email: user.email });
+
+    // 5. Respond
+    const userProfile: UserProfile = {
+      id: user.id,
+      email: user.email,
+      createdAt: user.createdAt,
+    };
+
+    res.status(200).json({ token, user: userProfile });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'An error occurred during login.' });
+  }
+});
 
 // TODO: Course endpoints (Task A10 stub, then full CRUD by Dev A/C) will be added here:
 // app.post('/courses', ...);

@@ -31,7 +31,7 @@ export const comparePassword = async (plaintextPassword: string, hashedPassword:
 
 // +++ JWT Utilities +++
 
-// IMPORTANT: Store this in an environment variable in a real application!
+//Store this in an environment variable in a real application!
 const DEFAULT_JWT_SECRET = 'your-very-secure-and-long-secret-key-for-dev-CHANGE-ME-AGAIN';
 const JWT_SECRET: Secret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
