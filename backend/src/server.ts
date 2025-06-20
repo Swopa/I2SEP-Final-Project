@@ -1,18 +1,19 @@
 // backend/src/server.ts
-import cors from 'cors';
-import express, { Express, Request, Response } from 'express';
-import sqlite3 from 'sqlite3'; // To type the 'db' variable
-import { User, UserProfile } from './models/user.model'; // Import User and UserProfile
-import { hashPassword, generateToken } from './utils/auth.utils'; // Import your auth utils
-import { findUserByEmail, createUser } from './services/user.service'; // Import user service functions
-import { comparePassword} from './utils/auth.utils';
-import { v4 as uuidv4 } from 'uuid';
-
-
-
+import cors from "cors";
+import express, { Express, Request, Response } from "express";
+import sqlite3 from "sqlite3"; // To type the 'db' variable
+import { User, UserProfile } from "./models/user.model"; // Import User and UserProfile
+import { hashPassword, generateToken, comparePassword } from "./utils/auth.utils"; // Import your auth utils
+import { findUserByEmail, createUser } from "./services/user.service"; // Import user service functions
+import { v4 as uuidv4 } from "uuid";
+import { authenticateToken } from './middleware/auth.middleware';
 
 // Database related imports
-import { getDbConnection, closeDbConnection, initializeUserTable } from './database';
+import {
+  getDbConnection,
+  closeDbConnection,
+  initializeUserTable,
+} from "./database";
 
 // Model imports - These will be used more extensively as DB interactions are built
 // import { User } from './models/user.model';
@@ -24,8 +25,8 @@ const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // --- Global Middleware ---
-app.use(cors());          // Enable CORS for all routes
-app.use(express.json());  // Middleware to parse JSON request bodies
+app.use(cors()); // Enable CORS for all routes
+app.use(express.json()); // Middleware to parse JSON request bodies
 
 // --- Database Instance ---
 // This will hold our database connection instance once initialized.
@@ -35,16 +36,21 @@ let db: sqlite3.Database | null = null;
 // --- API Endpoints ---
 
 // Health-check endpoint (remains functional)
-app.get('/health', (req: Request, res: Response) => {
+app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
-    status: 'UP',
+    status: "UP",
     timestamp: new Date().toISOString(),
   });
 });
 
-app.post('/auth/signup', async (req: Request, res: Response) => {
-  if (!db) { // Ensure db instance is available
-    return res.status(503).json({ message: 'Database service unavailable. Please try again later.' });
+app.post("/auth/signup", async (req: Request, res: Response) => {
+  if (!db) {
+    // Ensure db instance is available
+    return res
+      .status(503)
+      .json({
+        message: "Database service unavailable. Please try again later.",
+      });
   }
 
   try {
@@ -52,22 +58,26 @@ app.post('/auth/signup', async (req: Request, res: Response) => {
 
     // 1. Basic Validation
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required." });
     }
     // Add more validation (e.g., email format, password strength) as needed
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: 'Invalid email format.' });
+      return res.status(400).json({ message: "Invalid email format." });
     }
-    if (password.length < 6) { // Example: minimum password length
-        return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+    if (password.length < 6) {
+      // Example: minimum password length
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long." });
     }
-
 
     // 2. Check if user already exists
     const existingUser = await findUserByEmail(db, email);
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already in use.' }); // 409 Conflict
+      return res.status(409).json({ message: "Email already in use." }); // 409 Conflict
     }
 
     // 3. Hash the password
@@ -81,27 +91,28 @@ app.post('/auth/signup', async (req: Request, res: Response) => {
     const token = generateToken({ id: newUser.id, email: newUser.email });
 
     // 6. Respond (don't send back passwordHash)
-    const userProfile: UserProfile = { // Use UserProfile type
-        id: newUser.id,
-        email: newUser.email,
-        createdAt: newUser.createdAt,
+    const userProfile: UserProfile = {
+      // Use UserProfile type
+      id: newUser.id,
+      email: newUser.email,
+      createdAt: newUser.createdAt,
     };
 
     res.status(201).json({ token, user: userProfile });
-
-  } catch (error: any) { // Catch block with 'any' or 'unknown' for error
-    if (error.message === 'EmailAlreadyExists') { // Custom error from createUser
-        return res.status(409).json({ message: 'Email already in use.' });
+  } catch (error: any) {
+    // Catch block with 'any' or 'unknown' for error
+    if (error.message === "EmailAlreadyExists") {
+      // Custom error from createUser
+      return res.status(409).json({ message: "Email already in use." });
     }
-    console.error('Signup error:', error);
-    res.status(500).json({ message: 'An error occurred during signup.' });
+    console.error("Signup error:", error);
+    res.status(500).json({ message: "An error occurred during signup." });
   }
 });
 
-
-app.post('/auth/login', async (req: Request, res: Response) => {
+app.post("/auth/login", async (req: Request, res: Response) => {
   if (!db) {
-    return res.status(503).json({ message: 'Database service unavailable.' });
+    return res.status(503).json({ message: "Database service unavailable." });
   }
 
   try {
@@ -109,21 +120,23 @@ app.post('/auth/login', async (req: Request, res: Response) => {
 
     // 1. Basic Validation
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required." });
     }
 
     // 2. Find user by email
     const user = await findUserByEmail(db, email);
     if (!user) {
       // User not found - generic message for security (don't reveal if email exists or not)
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(401).json({ message: "Invalid credentials." });
     }
 
     // 3. Compare password
     const isPasswordMatch = await comparePassword(password, user.passwordHash);
     if (!isPasswordMatch) {
       // Password does not match - generic message
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(401).json({ message: "Invalid credentials." });
     }
 
     // 4. Generate JWT
@@ -138,10 +151,9 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     };
 
     res.status(200).json({ token, user: userProfile });
-
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'An error occurred during login.' });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "An error occurred during login." });
   }
 });
 
@@ -173,7 +185,6 @@ app.post('/notes', async (req: Request, res: Response) => {
 });
 */
 
-
 // --- Server Startup Function ---
 const startServer = async () => {
   let httpServer: ReturnType<typeof app.listen> | null = null; // To store the server instance
@@ -184,7 +195,7 @@ const startServer = async () => {
     // getDbConnection should throw an error if connection fails,
     // so if we reach here, establishedDb is a valid Database instance.
     db = establishedDb; // Assign to the module-scoped 'db' variable
-    console.log('Database connection established successfully.');
+    console.log("Database connection established successfully.");
 
     // 2. Initialize Database Schema (Create tables if they don't exist)
     //    The 'db' variable is guaranteed to be non-null here.
@@ -193,48 +204,51 @@ const startServer = async () => {
     // await initializeCourseTable(db);
     // await initializeAssignmentTable(db);
     // await initializeNoteTable(db);
-    console.log('Database schema initialization routines completed (User table checked/created).');
-
+    console.log(
+      "Database schema initialization routines completed (User table checked/created)."
+    );
 
     // 3. Start Listening for HTTP Requests
     httpServer = app.listen(PORT, () => {
       console.log(`Backend server is running on http://localhost:${PORT}`);
-      console.log('Available basic routes:');
-      console.log('  GET  /health');
+      console.log("Available basic routes:");
+      console.log("  GET  /health");
       // Add other routes to this log as they become functional
     });
 
     //shutdown logic
-    const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
-    signals.forEach(signal => {
+    const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
+    signals.forEach((signal) => {
       process.on(signal, async () => {
         console.log(`\nReceived ${signal}, shutting down gracefully...`);
         if (httpServer) {
           httpServer.close(async () => {
-            console.log('HTTP server closed.');
+            console.log("HTTP server closed.");
             try {
-                // closeDbConnection internally checks if dbInstance is set
-                await closeDbConnection();
-                console.log('Database connection closed due to server shutdown.');
+              // closeDbConnection internally checks if dbInstance is set
+              await closeDbConnection();
+              console.log("Database connection closed due to server shutdown.");
             } catch (err) {
-                console.error('Error closing database on shutdown:', err);
+              console.error("Error closing database on shutdown:", err);
             } finally {
-                process.exit(0); // Exit after attempting DB close
+              process.exit(0); // Exit after attempting DB close
             }
           });
         } else {
-            // If httpServer is somehow null (e.g., error before listen), just try to close DB and exit
-            try {
-                await closeDbConnection();
-            } catch (err) {
-                console.error('Error closing database on shutdown (no HTTP server):', err);
-            } finally {
-                process.exit(0);
-            }
+          // If httpServer is somehow null (e.g., error before listen), just try to close DB and exit
+          try {
+            await closeDbConnection();
+          } catch (err) {
+            console.error(
+              "Error closing database on shutdown (no HTTP server):",
+              err
+            );
+          } finally {
+            process.exit(0);
+          }
         }
       });
     });
-
   } catch (error) {
     console.error("Failed to start the server:", error);
     // Attempt to close DB if an error occurred after it was potentially opened.
@@ -242,7 +256,9 @@ const startServer = async () => {
     if (db) {
       try {
         await closeDbConnection();
-        console.log('Database connection closed due to server startup failure.');
+        console.log(
+          "Database connection closed due to server startup failure."
+        );
       } catch (closeErr) {
         console.error("Error closing DB on failed startup:", closeErr);
       }
@@ -250,6 +266,31 @@ const startServer = async () => {
     process.exit(1); // Exit the process with an error code
   }
 };
+
+
+/* ---- Testing for middleware
+app.get('/api/test-protected', authenticateToken, (req: Request, res: Response) => {
+  // If middleware passes, req.user will be populated
+  res.json({
+    message: 'Access to protected route granted!',
+    user: req.user
+  });
+});
+*/
+
+// Apply to the stubbed /courses POST route (from Task A10 plan)
+// This route will be fully implemented in Task A13
+app.post('/courses', authenticateToken, async (req: Request, res: Response) => {
+    // For now, just confirm middleware worked and user info is available
+    console.log('POST /courses accessed by user:', req.user);
+    // const { title } = req.body; // You'll use this when implementing full course creation
+    res.status(200).json({ 
+        message: `Stub for POST /courses reached by user ${req.user?.userId}`,
+        // receivedBody: req.body // Optional: echo back body for testing
+    });
+});
+
+
 
 // --- Actually Start the Server ---
 startServer();
