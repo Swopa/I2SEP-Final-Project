@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, FC } from 'react';
 
-// Define the shape of your user (example, will be more detailed later)
+
 interface User {
   id: string;
   email: string;
   // Add other user properties you might get from backend, e.g., name, roles
 }
 
-// Define the shape of the AuthContext
 interface AuthContextType {
   isAuthenticated: boolean; // Indicates if a user is logged in
   user: User | null;      // The logged-in user's data
@@ -16,10 +15,6 @@ interface AuthContextType {
   logout: () => void;     // Placeholder logout function
 }
 
-// Create the AuthContext with a default value
-// The default value is used when a component tries to consume the context
-// without being wrapped by its Provider. It's often a good practice to
-// throw an error for un-provided contexts to catch development mistakes.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Custom hook to easily consume the AuthContext
@@ -31,14 +26,11 @@ export const useAuth = () => {
   return context;
 };
 
-// AuthProvider component that will wrap your application
-// It manages the authentication state and provides it to its children
 interface AuthProviderProps {
-  children: ReactNode; // ReactNode type allows any valid React child (elements, strings, numbers, fragments, etc.)
+  children: ReactNode; 
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // State to track authentication status and user data
+export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Starts as false
   const [user, setUser] = useState<User | null>(null); // No user initially
 
@@ -57,10 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('AuthContext Stub: Logging out user.');
     setIsAuthenticated(false);
     setUser(null);
-    // In later tasks, this will also clear the JWT from local storage
   };
 
-  // The value provided to consumers of this context
   const contextValue: AuthContextType = {
     isAuthenticated,
     user,
