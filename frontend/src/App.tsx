@@ -1,5 +1,4 @@
-import React from 'react';
-import './App.css'; // Import the CSS file
+import './App.css'; 
 import { useAuth } from './context/AuthContext';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 
@@ -54,7 +53,6 @@ function App() {
       </header>
 
       <main className="main-content container">
-        {/* Define your routes here */}
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />

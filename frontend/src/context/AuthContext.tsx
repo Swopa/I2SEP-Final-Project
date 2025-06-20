@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode, FC } from 'react';
+import { saveToken, getToken, removeToken } from '../utils/tokenStorage';
 
 
 interface User {
@@ -13,6 +14,7 @@ interface AuthContextType {
   user: User | null;      // The logged-in user's data
   login: (email: string, password: string) => Promise<boolean>; // Placeholder login function
   logout: () => void;     // Placeholder logout function
+  // isLoadingAuth: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,21 +36,47 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Starts as false
   const [user, setUser] = useState<User | null>(null); // No user initially
 
-  // --- Placeholder Auth Functions ---
-  // These will be replaced by actual API calls in later tasks (B6 & B7)
+  useEffect(() => {
+    // setIsLoadingAuth(true); // Set loading true
+    const storedToken = getToken(); 
+    if (storedToken) {
+      // For the stub, we just assume a token means authenticated
+      setIsAuthenticated(true);
+      setUser({ id: 'persisted-user', email: 'persisted@example.com' }); // Dummy user for persisted session
+      console.log('AuthContext: User authenticated from persisted token.');
+    } else {
+      setIsAuthenticated(false);
+      setUser(null);
+      console.log('AuthContext: No persisted token found.');
+    }
+    // setIsLoadingAuth(false); // Set loading false
+  }, []); 
+
+ 
   const login = async (email: string, password: string): Promise<boolean> => {
-    console.log(`AuthContext Stub: Attempting to log in user: ${email}`);
-    // Simulate a successful login for now
-    setIsAuthenticated(true);
-    setUser({ id: 'stub-user-id-123', email: email });
-    console.log('AuthContext Stub: Login successful!');
-    return true; // Indicate success
+    const response = await (await import('../services/AuthService')).login(email, password);
+
+    if (response.success && response.user && response.token) {
+      saveToken(response.token);
+      setIsAuthenticated(true);
+      setUser(response.user);
+      console.log('AuthContext: Login successful and token saved.');
+      return true;
+    } else {
+      console.log('AuthContext: Login failed.');
+      removeToken(); // Ensure any old token is cleared on failed login
+      setIsAuthenticated(false);
+      setUser(null);
+      return false;
+    }
   };
+    
 
   const logout = () => {
-    console.log('AuthContext Stub: Logging out user.');
+    removeToken();
     setIsAuthenticated(false);
     setUser(null);
+    console.log('AuthContext: User logged out and token removed.');
   };
 
   const contextValue: AuthContextType = {
