@@ -332,6 +332,18 @@ body {
   text-decoration: underline;
 }
 
+/* Error Message Style */
+.error-message {
+  color: #d32f2f; /* A strong red */
+  font-size: 0.9em;
+  margin-top: -10px; /* Pull it closer to the form */
+  text-align: center;
+  background-color: rgba(211, 47, 47, 0.1); /* Light red background */
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid #d32f2f;
+}
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
   .main-content {
