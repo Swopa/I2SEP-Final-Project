@@ -244,6 +244,94 @@ body {
   font-size: 0.9em;
 }
 
+/* --- Auth Page Specific Styles --- */
+.auth-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1; /* Makes it take up available vertical space */
+  padding: var(--spacing-unit) * 2; /* Add some padding around the card */
+  background-color: var(--background-color); /* Matches body background */
+}
+
+.auth-card {
+  background-color: var(--card-background-color);
+  padding: calc(var(--spacing-unit) * 2);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px; /* Max width for the card */
+  text-align: center;
+}
+
+.auth-card h2 {
+  font-size: 2em;
+  color: var(--primary-dark-color);
+  margin-bottom: var(--spacing-unit) / 2;
+}
+
+.auth-tagline {
+  font-size: 1.1em;
+  color: var(--light-text-color);
+  margin-bottom: calc(var(--spacing-unit) * 2);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit); /* Space between form groups */
+}
+
+.form-group {
+  text-align: left; /* Align labels/inputs to the left within their group */
+}
+
+.form-group label {
+  display: block; /* Make label take its own line */
+  margin-bottom: var(--spacing-unit) / 2;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.form-input {
+  width: 100%;
+  padding: calc(var(--spacing-unit) * 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: 1em;
+  color: var(--text-color);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.auth-btn {
+  margin-top: var(--spacing-unit); /* Space above the button */
+  width: 100%; /* Make button full width of the card */
+  padding: calc(var(--spacing-unit) * 0.8) calc(var(--spacing-unit) * 1.5);
+  font-size: 1.1em;
+}
+
+.auth-link-text {
+  margin-top: calc(var(--spacing-unit) * 1.5);
+  font-size: 0.95em;
+  color: var(--light-text-color);
+}
+
+.auth-link {
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
   .main-content {
