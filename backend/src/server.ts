@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Assignment } from './models/assignment.model'; 
 import { readAssignmentsFromFile, writeAssignmentsToFile, readNotesFromFile, writeNotesToFile } from './fileStore'; 
 import { Note } from './models/note.model';
+import { getDbConnection, closeDbConnection } from './database';
 
 
 const app: Express = express();
