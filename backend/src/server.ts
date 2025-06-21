@@ -25,6 +25,7 @@ import {
   closeDbConnection,
   initializeUserTable,
   initializeCourseTable,
+  initializeAssignmentTable,
 } from "./database";
 
 import dotenv from 'dotenv';
@@ -443,7 +444,7 @@ const startServer = async () => {
     await initializeCourseTable(db);
     // TODO (in later tasks):
     // await initializeCourseTable(db);
-    // await initializeAssignmentTable(db);
+    await initializeAssignmentTable(db);
     // await initializeNoteTable(db);
     console.log(
       "Database schema initialization routines completed (User table checked/created)."
