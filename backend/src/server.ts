@@ -450,6 +450,25 @@ app.post('/assignments', authenticateToken, async (req: Request, res: Response) 
   }
 });
 
+// GET /assignments - Retrieve all assignments for the authenticated user
+app.get('/assignments', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const userId = req.user.userId;
+    const userAssignments = await getAssignmentsByUserIdDb(db, userId);
+    res.status(200).json(userAssignments);
+  } catch (error) {
+    console.error('Error fetching assignments:', error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to fetch assignments.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while fetching assignments.' });
+    }
+  }
+});
+
 // TODO: Note endpoints (to be re-implemented by Dev C using 'db')
 /*
 app.get('/notes', (req: Request, res: Response) => {
@@ -497,6 +516,7 @@ const startServer = async () => {
       console.log("  POST /courses (Protected)");
       console.log("  GET  /courses (Protected)");
       console.log('  POST /assignments (Protected)');
+      console.log('  GET  /assignments (Protected)');
       // Add other routes to this log as they become functional
     });
 
