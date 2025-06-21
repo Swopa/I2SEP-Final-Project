@@ -83,12 +83,46 @@ export const addAssignment = async (newAssignment: Omit<Assignment, 'id'>): Prom
   }
 };
 
-// Placeholder for updateAssignment and deleteAssignment (to be added in C14)
-export const updateAssignment = async (id: string, updatedFields: Partial<Assignment>): Promise<ApiResponse<Assignment>> => {
-    console.log(`AssignmentService Stub: Updating assignment ${id} with`, updatedFields);
-    return { success: true, message: 'Update not yet implemented.' };
+/**
+ * Updates an existing assignment in the backend.
+ * Requires authentication token.
+ * @param id The ID of the assignment to update.
+ * @param updatedFields An object containing the fields to update.
+ */
+export const updateAssignment = async (id: string, updatedFields: Partial<Omit<Assignment, 'id'>>): Promise<ApiResponse<Assignment>> => { // <--- UPDATED
+  const token = getToken();
+  if (!token) {
+    return { success: false, message: 'Authentication required. No token found.' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/assignments/${id}`, { // <--- Backend expects ID in URL
+      method: 'PUT', // or 'PATCH' depending on backend
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updatedFields),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) { // Check for 2xx status codes
+      return { success: true, data: data as Assignment };
+    } else {
+      return {
+        success: false,
+        message: data.message || `Failed to update assignment: ${response.statusText}`,
+        error: data.error,
+      };
+    }
+  } catch (error) {
+    console.error(`Network or unexpected error updating assignment ${id}:`, error);
+    return { success: false, message: 'Network error or server unavailable.' };
+  }
 };
 
+// Placeholder for deleteAssignment (to be added later)
 export const deleteAssignment = async (id: string): Promise<ApiResponse<void>> => {
     console.log(`AssignmentService Stub: Deleting assignment ${id}`);
     return { success: true, message: 'Delete not yet implemented.' };

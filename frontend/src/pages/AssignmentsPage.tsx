@@ -1,10 +1,13 @@
 // frontend/src/pages/AssignmentsPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import type { Assignment } from '../types'; // Import Assignment type
-import '../App.css'; // Assuming common styles are linked here
-import { fetchAllAssignments, addAssignment } from '../services/assignmentService'; // <--- Import service functions
-import { useAuth } from '../context/AuthContext'; // To potentially handle re-authentication/redirect on 401 errors
+import type { Assignment } from '../types';
+import '../App.css';
+import { fetchAllAssignments, addAssignment, updateAssignment } from '../services/assignmentService'; // <--- Import updateAssignment
+import { useAuth } from '../context/AuthContext';
+import EditAssignmentModal from '../components/EditAssignmentModal'; // <--- Import the new modal component
+
+const API_BASE_URL = 'http://localhost:3001'; // Ensure this matches your backend URL
 
 const AssignmentsPage: React.FC = () => {
   // --- Assignment States ---
@@ -12,32 +15,38 @@ const AssignmentsPage: React.FC = () => {
   const [newAssignmentTitle, setNewAssignmentTitle] = useState<string>('');
   const [newAssignmentCourse, setNewAssignmentCourse] = useState<string>('');
   const [newAssignmentDeadline, setNewAssignmentDeadline] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state for fetch
-  const [isAdding, setIsAdding] = useState<boolean>(false); // Loading state for adding new assignment
-  const [error, setError] = useState<string | null>(null); // Error state for both operations
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { logout } = useAuth(); // Get logout from context to handle unauthorized access
+  // --- State for Edit Modal ---
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [currentAssignmentToEdit, setCurrentAssignmentToEdit] = useState<Assignment | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false); // Loading state for modal save
+  const [editError, setEditError] = useState<string | null>(null); // Error for modal save
+
+  const { logout } = useAuth();
 
   // --- Assignment Functions ---
-  const handleFetchAssignments = async () => { // Renamed to avoid confusion with service function
-    setError(null); // Clear previous errors
-    setIsLoading(true); // Set loading true
+  const handleFetchAssignments = async () => {
+    setError(null);
+    setIsLoading(true);
     try {
-      const response = await fetchAllAssignments(); // <--- Call service function
+      const response = await fetchAllAssignments();
       if (response.success && response.data) {
         setAssignments(response.data);
       } else {
         setError(response.message || 'Failed to load assignments.');
         if (response.message?.includes('Authentication required')) {
           console.error('Authentication error fetching assignments. Logging out...');
-          logout(); // Log out if authentication fails (e.g., token expired, not found)
+          logout();
         }
       }
     } catch (err) {
       console.error("An unexpected error occurred during assignment fetch:", err);
       setError('An unexpected error occurred while loading assignments.');
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
@@ -49,51 +58,87 @@ const AssignmentsPage: React.FC = () => {
       return;
     }
 
-    // Convert YYYY-MM-DD from input type="date" to ISO 8601 string for backend validation
     const deadlineDate = new Date(newAssignmentDeadline);
     deadlineDate.setUTCHours(23, 59, 59, 999);
     const formattedDeadline = deadlineDate.toISOString();
 
-    const assignmentData = { // Data to send, Omit 'id' as backend generates it
+    const assignmentData = {
       title: newAssignmentTitle,
       course: newAssignmentCourse,
       deadline: formattedDeadline,
     };
 
-    setError(null); // Clear previous errors
-    setIsAdding(true); // Set adding state
+    setError(null);
+    setIsAdding(true);
     try {
-      const response = await addAssignment(assignmentData); // <--- Call service function
+      const response = await addAssignment(assignmentData);
       if (response.success && response.data) {
         setNewAssignmentTitle('');
         setNewAssignmentCourse('');
         setNewAssignmentDeadline('');
-        handleFetchAssignments(); // Re-fetch to update the list with the new item
+        handleFetchAssignments();
       } else {
         setError(response.message || 'Failed to add assignment.');
         if (response.message?.includes('Authentication required')) {
           console.error('Authentication error adding assignment. Logging out...');
-          logout(); // Log out if authentication fails
+          logout();
         }
       }
     } catch (err) {
       console.error("An unexpected error occurred during assignment add:", err);
       setError('An unexpected error occurred while adding assignment.');
     } finally {
-      setIsAdding(false); // Reset adding state
+      setIsAdding(false);
     }
   };
 
-  // Fetch assignments when the component mounts
+  // --- Edit Logic ---
+  const handleEditClick = (assignment: Assignment) => {
+    setCurrentAssignmentToEdit(assignment); // Set the assignment to be edited
+    setIsEditModalOpen(true); // Open the modal
+    setEditError(null); // Clear any previous modal errors
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setCurrentAssignmentToEdit(null); // Clear the assignment being edited
+    setEditError(null);
+  };
+
+  const handleSaveEditedAssignment = async (id: string, updatedFields: Partial<Omit<Assignment, 'id'>>) => {
+    setEditError(null); // Clear previous edit errors
+    setIsSavingEdit(true); // Set saving state
+    try {
+      const response = await updateAssignment(id, updatedFields); // Call update service
+      if (response.success) {
+        console.log('Assignment updated successfully!');
+        handleCloseEditModal(); // Close modal on success
+        handleFetchAssignments(); // Re-fetch list to show changes
+      } else {
+        setEditError(response.message || 'Failed to save changes.');
+        if (response.message?.includes('Authentication required')) {
+            console.error('Authentication error updating assignment. Logging out...');
+            logout();
+        }
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred during assignment update:", err);
+      setEditError('An unexpected error occurred while saving changes.');
+    } finally {
+      setIsSavingEdit(false); // Reset saving state
+    }
+  };
+
+  // Fetch assignments on component mount
   useEffect(() => {
     handleFetchAssignments();
-  }, []); // Run only once on mount
+  }, []);
 
   return (
     <section className="assignments-section section-card">
       <h2>Assignments</h2>
 
-      {/* Form to Add New Assignment */}
+      {/* Add Assignment Form */}
       <h3 className="section-subtitle">Add New Assignment</h3>
       <form onSubmit={handleAddAssignment} className="add-item-form">
         <input
@@ -102,7 +147,7 @@ const AssignmentsPage: React.FC = () => {
           value={newAssignmentTitle}
           onChange={(e) => setNewAssignmentTitle(e.target.value)}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <input
           type="text"
@@ -110,14 +155,14 @@ const AssignmentsPage: React.FC = () => {
           value={newAssignmentCourse}
           onChange={(e) => setNewAssignmentCourse(e.target.value)}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <input
           type="date"
           value={newAssignmentDeadline}
           onChange={(e) => setNewAssignmentDeadline(e.target.value)}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <button type="submit" className="btn btn-primary" disabled={isAdding}>
           {isAdding ? 'Adding...' : 'Add Assignment'}
@@ -142,9 +187,30 @@ const AssignmentsPage: React.FC = () => {
                 <span className="item-tag">{assignment.course}</span>
               </div>
               <p className="item-meta">Due: {assignment.deadline.split('T')[0]}</p>
+              <div className="item-actions"> {/* <--- NEW: Actions container */}
+                <button
+                  className="btn btn-secondary btn-small" // <--- NEW: Edit button
+                  onClick={() => handleEditClick(assignment)}
+                >
+                  Edit
+                </button>
+                {/* Delete button will go here in a later task */}
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Edit Assignment Modal */}
+      {currentAssignmentToEdit && ( // Only render if an assignment is selected for editing
+        <EditAssignmentModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          assignment={currentAssignmentToEdit}
+          onSave={handleSaveEditedAssignment}
+          isLoading={isSavingEdit}
+          error={editError}
+        />
       )}
     </section>
   );
