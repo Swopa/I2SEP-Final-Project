@@ -20,7 +20,13 @@ import {
   deleteCourseDb,
 } from "./services/course.service";
 
-import {createNoteDb, getNotesByUserIdDb,} from "./services/note.service"
+import {
+  createNoteDb, 
+  getNoteByIdAndUserIdDb, 
+  getNotesByUserIdDb,
+  updateNoteDb,
+  deleteNoteDb
+} from "./services/note.service"
 
 // Database related imports
 import {
@@ -453,6 +459,79 @@ app.get('/notes', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
+// GET /notes/:noteId - Retrieve a specific note for the authenticated user
+app.get('/notes/:noteId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { noteId } = req.params;
+    const note = await getNoteByIdAndUserIdDb(db, noteId, req.user.userId);
+
+    if (!note) {
+      return res.status(404).json({ message: 'Note not found or access denied.' });
+    }
+    res.status(200).json(note);
+  } catch (error) {
+    console.error(`Error fetching note ${req.params.noteId}:`, error);
+    res.status(500).json({ message: 'Failed to fetch note.' });
+  }
+});
+
+// PUT /notes/:noteId - Update a specific note for the authenticated user
+app.put('/notes/:noteId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { noteId } = req.params;
+    const noteDataToUpdate = req.body as Partial<NoteDataPayload>; // Expect partial data for update
+
+    // Basic Validation: ensure at least one updatable field is present in the body
+    if (Object.keys(noteDataToUpdate).length === 0) {
+        return res.status(400).json({ message: 'No update data provided.' });
+    }
+    // Add more specific validation for fields if present (e.g., title/content not empty if provided)
+    if (noteDataToUpdate.title !== undefined && (typeof noteDataToUpdate.title !== 'string' || noteDataToUpdate.title.trim() === '')) {
+        return res.status(400).json({ message: 'Title, if provided for update, must be a non-empty string.' });
+    }
+    if (noteDataToUpdate.content !== undefined && (typeof noteDataToUpdate.content !== 'string' || noteDataToUpdate.content.trim() === '')) {
+        return res.status(400).json({ message: 'Content, if provided for update, must be a non-empty string.' });
+    }
+    // Add validation for 'link' or 'course' format if they are provided
+
+    const updatedNote = await updateNoteDb(db, noteId, req.user.userId, noteDataToUpdate);
+
+    if (!updatedNote) {
+      // This means either the note wasn't found for that user, or no actual change was made to data
+      return res.status(404).json({ message: 'Note not found, access denied, or no changes specified.' });
+    }
+    res.status(200).json(updatedNote);
+  } catch (error) {
+    console.error(`Error updating note ${req.params.noteId}:`, error);
+    res.status(500).json({ message: 'Failed to update note.' });
+  }
+});
+
+// DELETE /notes/:noteId - Delete a specific note for the authenticated user
+app.delete('/notes/:noteId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { noteId } = req.params;
+    const wasDeleted = await deleteNoteDb(db, noteId, req.user.userId);
+
+    if (!wasDeleted) {
+      return res.status(404).json({ message: 'Note not found or access denied.' });
+    }
+    res.status(204).send(); // 204 No Content is standard for successful DELETE
+  } catch (error) {
+    console.error(`Error deleting note ${req.params.noteId}:`, error);
+    res.status(500).json({ message: 'Failed to delete note.' });
+  }
+});
+
 
 // TODO: Assignment endpoints (to be re-implemented using 'db')
 /*
@@ -464,17 +543,6 @@ app.get('/assignments', (req: Request, res: Response) => {
 
 app.post('/assignments', async (req: Request, res: Response) => {
   res.status(501).json({ message: 'Assignments POST Not Implemented with DB yet' });
-});
-*/
-
-// TODO: Note endpoints (to be re-implemented by Dev C using 'db')
-/*
-app.get('/notes', (req: Request, res: Response) => {
-  res.status(501).json({ message: 'Notes GET Not Implemented with DB yet' });
-});
-
-app.post('/notes', async (req: Request, res: Response) => {
-  res.status(501).json({ message: 'Notes POST Not Implemented with DB yet' });
 });
 */
 
