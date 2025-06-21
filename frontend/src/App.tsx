@@ -1,7 +1,9 @@
-import './App.css'; 
+import React from 'react';
+import './App.css';
 import { useAuth } from './context/AuthContext';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 
+import Sidebar from './components/Sidebar'; 
 
 import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
@@ -10,15 +12,13 @@ import AssignmentsPage from './pages/AssignmentsPage';
 import NotesPage from './pages/NotesPage';
 import CoursesPage from './pages/CoursesPage';
 
-//const API_BASE_URL = 'http://localhost:3001';
-
 function App() {
-
-
   const { isAuthenticated, user, login, logout } = useAuth();
   const navigate = useNavigate();
 
-   const handleTestLogin = async () => {
+  // --- Temporary Test Buttons/Display ---
+  // (Keeping these for now for quick auth state manipulation during development)
+  const handleTestLogin = async () => {
     await login('test@example.com', 'password123');
     navigate('/dashboard');
   };
@@ -27,6 +27,7 @@ function App() {
     logout();
     navigate('/login');
   };
+  // --- End Temporary Test ---
 
   return (
     <div className="App">
@@ -40,36 +41,39 @@ function App() {
             {isAuthenticated ? (
               <>
                 Logged in as: {user?.email}
-                <button onClick={handleTestLogout} style={{ marginLeft: '10px', padding: '5px 10px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Logout</button>
+                <button onClick={handleTestLogout} className="btn-inline">Logout</button> {/* Used new class */}
               </>
             ) : (
               <>
                 Not logged in
-                <button onClick={handleTestLogin} style={{ marginLeft: '10px', padding: '5px 10px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Test Login</button>
+                <button onClick={handleTestLogin} className="btn-inline">Test Login</button> {/* Used new class */}
               </>
             )}
           </div>
         </div>
       </header>
 
-      <main className="main-content container">
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+      <main className="main-layout-container container"> {/* <--- NEW CLASS HERE */}
+        {isAuthenticated && <Sidebar />} {/* <--- Render Sidebar ONLY if authenticated */}
+        <div className="main-content-view"> {/* <--- NEW WRAPPER FOR ROUTES */}
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-          {/* Protected Routes (we'll implement ProtectedRoute wrapper in Task 10) */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/assignments" element={<AssignmentsPage />} />
-          <Route path="/notes" element={<NotesPage />} />
-          <Route path="/courses" element={<CoursesPage />} />
+            {/* Protected Routes (will be truly protected in Task 10) */}
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/notes" element={<NotesPage />} />
+            <Route path="/courses" element={<CoursesPage />} />
 
-          {/* Default route - redirect based on auth status */}
-          <Route path="/" element={isAuthenticated ? <DashboardPage /> : <LoginPage />} />
+            {/* Default route - redirect based on auth status */}
+            <Route path="/" element={isAuthenticated ? <DashboardPage /> : <LoginPage />} />
 
-          {/* Fallback for unmatched routes */}
-          <Route path="*" element={<div style={{ padding: '20px', textAlign: 'center' }}><h2>404 - Page Not Found</h2><p>The page you are looking for does not exist.</p></div>} />
-        </Routes>
+            {/* Fallback for unmatched routes */}
+            <Route path="*" element={<div style={{ padding: '20px', textAlign: 'center' }}><h2>404 - Page Not Found</h2><p>The page you are looking for does not exist.</p></div>} />
+          </Routes>
+        </div>
       </main>
 
       <footer className="app-footer">
