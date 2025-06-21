@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import type { Note } from '../types'; // Import Note type
-import '../App.css'; // Common styling
-import { fetchAllNotes, addNote } from '../services/noteService'; // Import service functions
-import { useAuth } from '../context/AuthContext'; // To handle re-authentication/redirect
+// frontend/src/pages/NotesPage.tsx
 
-const API_BASE_URL = 'http://localhost:3001'; // Base URL for your backend API
+import React, { useState, useEffect } from 'react';
+import type { Note } from '../types';
+import '../App.css';
+import { fetchAllNotes, addNote, updateNote } from '../services/noteService'; // <--- Import updateNote
+import { useAuth } from '../context/AuthContext';
+import EditNoteModal from '../components/EditNoteModal'; // <--- Import the new modal component
 
 const NotesPage: React.FC = () => {
   // --- Note States ---
@@ -12,33 +13,39 @@ const NotesPage: React.FC = () => {
   const [newNoteCourse, setNewNoteCourse] = useState<string>('');
   const [newNoteTitle, setNewNoteTitle] = useState<string>('');
   const [newNoteContent, setNewNoteContent] = useState<string>('');
-  const [newNoteLink, setNewNoteLink] = useState<string>(''); // Optional link
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state for fetch
-  const [isAdding, setIsAdding] = useState<boolean>(false); // Loading state for adding new note
-  const [error, setError] = useState<string | null>(null); // Error state for both operations
+  const [newNoteLink, setNewNoteLink] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { logout } = useAuth(); // Get logout from context to handle unauthorized access
+  // --- State for Edit Modal ---
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [currentNoteToEdit, setCurrentNoteToEdit] = useState<Note | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false); // Loading state for modal save
+  const [editError, setEditError] = useState<string | null>(null); // Error for modal save
+
+  const { logout } = useAuth();
 
   // --- Note Functions ---
-  const handleFetchNotes = async () => { // Renamed for clarity
-    setError(null); // Clear previous errors
-    setIsLoading(true); // Set loading true
+  const handleFetchNotes = async () => {
+    setError(null);
+    setIsLoading(true);
     try {
-      const response = await fetchAllNotes(); // Call service function
+      const response = await fetchAllNotes();
       if (response.success && response.data) {
         setNotes(response.data);
       } else {
         setError(response.message || 'Failed to load notes.');
         if (response.message?.includes('Authentication required')) {
           console.error('Authentication error fetching notes. Logging out...');
-          logout(); // Log out if authentication fails (e.g., token expired, not found)
+          logout();
         }
       }
     } catch (err) {
       console.error("An unexpected error occurred during note fetch:", err);
       setError('An unexpected error occurred while loading notes.');
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
@@ -50,48 +57,85 @@ const NotesPage: React.FC = () => {
       return;
     }
 
-    const noteData = { // Data to send, Omit 'id' and 'createdAt' as backend generates them
+    const noteData = {
       course: newNoteCourse,
       title: newNoteTitle,
       content: newNoteContent,
-      link: newNoteLink || undefined, // Send undefined if link is empty
+      link: newNoteLink || undefined,
     };
 
-    setError(null); // Clear previous errors
-    setIsAdding(true); // Set adding state
+    setError(null);
+    setIsAdding(true);
     try {
-      const response = await addNote(noteData); // Call service function
+      const response = await addNote(noteData);
       if (response.success && response.data) {
         setNewNoteCourse('');
         setNewNoteTitle('');
         setNewNoteContent('');
         setNewNoteLink('');
-        handleFetchNotes(); // Re-fetch to update the list with the new item
+        handleFetchNotes();
       } else {
         setError(response.message || 'Failed to add note.');
         if (response.message?.includes('Authentication required')) {
           console.error('Authentication error adding note. Logging out...');
-          logout(); // Log out if authentication fails
+          logout();
         }
       }
     } catch (err) {
       console.error("An unexpected error occurred during note add:", err);
       setError('An unexpected error occurred while adding note.');
     } finally {
-      setIsAdding(false); // Reset adding state
+      setIsAdding(false);
     }
   };
 
-  // Fetch notes when the component mounts
+  // --- Edit Logic ---
+  const handleEditClick = (note: Note) => {
+    setCurrentNoteToEdit(note); // Set the note to be edited
+    setIsEditModalOpen(true); // Open the modal
+    setEditError(null); // Clear any previous modal errors
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setCurrentNoteToEdit(null); // Clear the note being edited
+    setEditError(null);
+  };
+
+  const handleSaveEditedNote = async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
+    setEditError(null); // Clear previous edit errors
+    setIsSavingEdit(true); // Set saving state
+    try {
+      const response = await updateNote(id, updatedFields); // Call update service
+      if (response.success) {
+        console.log('Note updated successfully!');
+        handleCloseEditModal(); // Close modal on success
+        handleFetchNotes(); // Re-fetch list to show changes
+      } else {
+        setEditError(response.message || 'Failed to save changes.');
+        if (response.message?.includes('Authentication required')) {
+            console.error('Authentication error updating note. Logging out...');
+            logout();
+        }
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred during note update:", err);
+      setEditError('An unexpected error occurred while saving changes.');
+    } finally {
+      setIsSavingEdit(false); // Reset saving state
+    }
+  };
+
+  // Fetch notes on component mount
   useEffect(() => {
     handleFetchNotes();
-  }, []); // Run only once on mount
+  }, []);
 
   return (
     <section className="notes-section section-card">
       <h2>Notes</h2>
 
-      {/* Form to Add New Note */}
+      {/* Add Note Form */}
       <h3 className="section-subtitle">Add New Note</h3>
       <form onSubmit={handleAddNote} className="add-item-form">
         <input
@@ -100,7 +144,7 @@ const NotesPage: React.FC = () => {
           value={newNoteCourse}
           onChange={(e) => setNewNoteCourse(e.target.value)}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <input
           type="text"
@@ -108,7 +152,7 @@ const NotesPage: React.FC = () => {
           value={newNoteTitle}
           onChange={(e) => setNewNoteTitle(e.target.value)}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <textarea
           placeholder="Note Content"
@@ -116,14 +160,14 @@ const NotesPage: React.FC = () => {
           onChange={(e) => setNewNoteContent(e.target.value)}
           rows={4}
           required
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         ></textarea>
         <input
           type="url"
           placeholder="Related Link (optional)"
           value={newNoteLink}
           onChange={(e) => setNewNoteLink(e.target.value)}
-          disabled={isAdding} // Disable inputs while adding
+          disabled={isAdding}
         />
         <button type="submit" className="btn btn-primary" disabled={isAdding}>
           {isAdding ? 'Adding...' : 'Add Note'}
@@ -152,14 +196,30 @@ const NotesPage: React.FC = () => {
                 <p className="item-link"><a href={note.link} target="_blank" rel="noopener noreferrer">View Link</a></p>
               )}
               <small className="item-meta">Created: {new Date(note.createdAt).toLocaleDateString()}</small>
-              {/* Edit/Delete buttons will go here in later tasks */}
               <div className="item-actions">
-                {/* <button className="btn btn-secondary btn-small">Edit</button> */}
-                {/* <button className="btn btn-danger btn-small">Delete</button> */}
+                <button
+                  className="btn btn-secondary btn-small"
+                  onClick={() => handleEditClick(note)}
+                >
+                  Edit
+                </button>
+                {/* Delete button will go here in Task C20 */}
               </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Edit Note Modal */}
+      {currentNoteToEdit && ( // Only render if a note is selected for editing
+        <EditNoteModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          note={currentNoteToEdit}
+          onSave={handleSaveEditedNote}
+          isLoading={isSavingEdit}
+          error={editError}
+        />
       )}
     </section>
   );

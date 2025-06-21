@@ -83,10 +83,43 @@ export const addNote = async (newNote: Omit<Note, 'id' | 'createdAt'>): Promise<
   }
 };
 
-// Placeholder for updateNote and deleteNote (to be added in C19 and C20)
-export const updateNote = async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>): Promise<ApiResponse<Note>> => {
-    console.log(`NoteService Stub: Updating note ${id} with`, updatedFields);
-    return { success: true, message: 'Update not yet implemented.' };
+/**
+ * Updates an existing note in the backend.
+ * Requires authentication token.
+ * @param id The ID of the note to update.
+ * @param updatedFields An object containing the fields to update.
+ */
+export const updateNote = async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>): Promise<ApiResponse<Note>> => { // <--- UPDATED
+  const token = getToken();
+  if (!token) {
+    return { success: false, message: 'Authentication required. No token found.' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/notes/${id}`, { // <--- Backend expects ID in URL
+      method: 'PUT', // or 'PATCH' depending on backend
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updatedFields),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) { // Check for 2xx status codes
+      return { success: true, data: data as Note };
+    } else {
+      return {
+        success: false,
+        message: data.message || `Failed to update note: ${response.statusText}`,
+        error: data.error,
+      };
+    }
+  } catch (error) {
+    console.error(`Network or unexpected error updating note ${id}:`, error);
+    return { success: false, message: 'Network error or server unavailable.' };
+  }
 };
 
 export const deleteNote = async (id: string): Promise<ApiResponse<void>> => {
