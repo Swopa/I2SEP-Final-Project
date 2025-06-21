@@ -17,7 +17,6 @@ function App() {
   const navigate = useNavigate();
 
   // --- Temporary Test Buttons/Display ---
-  // (Keeping these for now for quick auth state manipulation during development)
   const handleTestLogin = async () => {
     await login('test@example.com', 'password123');
     navigate('/dashboard');
@@ -41,12 +40,12 @@ function App() {
             {isAuthenticated ? (
               <>
                 Logged in as: {user?.email}
-                <button onClick={handleTestLogout} className="btn-inline">Logout</button> {/* Used new class */}
+                <button onClick={handleTestLogout} className="btn-inline">Logout</button> 
               </>
             ) : (
               <>
                 Not logged in
-                <button onClick={handleTestLogin} className="btn-inline">Test Login</button> {/* Used new class */}
+                <button onClick={handleTestLogin} className="btn-inline">Test Login</button> 
               </>
             )}
           </div>
