@@ -18,7 +18,7 @@ export const signup = async (email: string, password: string): Promise<AuthRespo
   //await new Promise(resolve => setTimeout(resolve, 500));
 console.log('AuthService: Attempting real signup...');
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/signup`, { // Real API endpoint
+    const response = await fetch(`${BACKEND_BASE_URL}/auth/signup`, { // Real API endpoint
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const login = async (email: string, password: string): Promise<AuthRespon
 
   console.log('AuthService: Attempting real login...');
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/login`, { // Real API endpoint
+    const response = await fetch(`${BACKEND_BASE_URL}/auth/login`, { // Real API endpoint
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

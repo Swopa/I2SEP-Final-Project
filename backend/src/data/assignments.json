@@ -10,5 +10,11 @@
     "title": "Prepare Math Presentation",
     "course": "Calculus III",
     "deadline": "2024-09-15T12:00:00.000Z"
+  },
+  {
+    "id": "ada8d203-fe8e-49cf-9998-b40e03890fb7",
+    "title": "Final Project",
+    "course": "I2SEPC",
+    "deadline": "2025-07-12T23:59:59.999Z"
   }
 ]

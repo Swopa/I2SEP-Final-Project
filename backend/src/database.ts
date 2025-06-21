@@ -81,3 +81,61 @@ export const initializeUserTable = (db: sqlite3.Database): Promise<void> => {
     });
   });
 };
+
+export const initializeCourseTable = (db: sqlite3.Database): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS courses (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE 
+      );
+    `;
+    // ON DELETE CASCADE means if a user is deleted, their courses are also deleted.
+    // Consider if this is desired. Alternatives: ON DELETE SET NULL (if userId can be NULL),
+    // ON DELETE RESTRICT (prevent user deletion if they have courses), or handle in application logic.
+    // For now, CASCADE is a common choice for owned resources.
+
+    db.run(sql, (err) => {
+      if (err) {
+        console.error("Error creating courses table", err.message);
+        reject(err);
+      } else {
+        console.log("Courses table checked/created successfully.");
+        resolve();
+      }
+    });
+  });
+};
+
+// backend/src/database.ts
+// ...
+export const initializeNoteTable = (db: sqlite3.Database): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        course TEXT,          -- Changed from c ourseTitle, optional
+        link TEXT,            -- Added link, optional
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `; // Removed 'tags' column
+    console.log("Attempting to create/check notes table..."); // <--- ADD THIS
+    db.run(sql, (err) => {
+      if (err) {
+        console.error("SQLITE ERROR while creating notes table:", err.message); // <--- MODIFIED LOG
+        reject(err);
+      } else {
+        console.log("SQLITE SUCCESS: Notes table operation completed."); // <--- MODIFIED LOG
+        resolve();
+      }
+    });
+  });
+};
+// ...
