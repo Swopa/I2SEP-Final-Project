@@ -28,6 +28,10 @@ import {
   initializeAssignmentTable,
 } from "./database";
 
+// Assignment related imports
+import { Assignment, NewAssignmentData } from './models/assignment.model';
+import { createAssignmentDb, getAssignmentsByUserIdDb } from './services/assignment.service';
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -400,18 +404,51 @@ app.delete('/courses/:courseId', authenticateToken, async (req: Request, res: Re
 });
 
 
-// TODO: Assignment endpoints (to be re-implemented using 'db')
-/*
-app.get('/assignments', (req: Request, res: Response) => {
-  // Example: if (!db) return res.status(503).send('Database not ready');
-  // db.all("SELECT * FROM assignments WHERE userId = ?", [req.user.id], (err, rows) => {...});
-  res.status(501).json({ message: 'Assignments GET Not Implemented with DB yet' });
-});
+// +++ Assignment API Endpoints +++
 
-app.post('/assignments', async (req: Request, res: Response) => {
-  res.status(501).json({ message: 'Assignments POST Not Implemented with DB yet' });
+// POST /assignments - Create a new assignment for the authenticated user
+app.post('/assignments', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const assignmentData = req.body as NewAssignmentData;
+    const userId = req.user.userId;
+
+    // Basic Validation
+    if (!assignmentData.title || typeof assignmentData.title !== 'string' || assignmentData.title.trim() === '') {
+      return res.status(400).json({ message: 'Assignment title is required.' });
+    }
+    if (!assignmentData.dueDate || typeof assignmentData.dueDate !== 'string') { // Basic check
+      return res.status(400).json({ message: 'Assignment dueDate is required and must be a string.' });
+    }
+    // Optional: More robust ISO date validation for dueDate
+    // const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/; // Example, adjust for milliseconds
+    // if (!isoDatePattern.test(assignmentData.dueDate)) {
+    //   return res.status(400).json({ message: 'dueDate must be a valid ISO 8601 date string (e.g., "YYYY-MM-DDTHH:mm:ss.sssZ").' });
+    // }
+
+
+    // Ensure default status if not provided, matching NewAssignmentData and Assignment interface
+    const dataToSave: NewAssignmentData & { status?: Assignment['status'] } = {
+        ...assignmentData,
+        status: assignmentData.status || 'pending'
+    };
+
+
+    const newAssignment = await createAssignmentDb(db, userId, dataToSave as NewAssignmentData); // Cast if needed after adding status
+
+    res.status(201).json(newAssignment);
+
+  } catch (error) {
+    console.error('Error creating assignment:', error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to create assignment.', error: error.message });
+    } else {
+        res.status(500).json({ message: 'An unknown error occurred while creating the assignment.' });
+    }
+  }
 });
-*/
 
 // TODO: Note endpoints (to be re-implemented by Dev C using 'db')
 /*
@@ -459,6 +496,7 @@ const startServer = async () => {
       console.log("  POST /auth/login");
       console.log("  POST /courses (Protected)");
       console.log("  GET  /courses (Protected)");
+      console.log('  POST /assignments (Protected)');
       // Add other routes to this log as they become functional
     });
 
