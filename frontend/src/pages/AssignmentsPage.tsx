@@ -1,44 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import type { Assignment } from '../types';
-import '../App.css';
+// frontend/src/pages/AssignmentsPage.tsx
 
-const API_BASE_URL = 'http://localhost:3001';
+import React, { useState, useEffect } from 'react';
+import type { Assignment } from '../types'; // Import Assignment type
+import '../App.css'; // Assuming common styles are linked here
+import { fetchAllAssignments, addAssignment } from '../services/assignmentService'; // <--- Import service functions
+import { useAuth } from '../context/AuthContext'; // To potentially handle re-authentication/redirect on 401 errors
 
 const AssignmentsPage: React.FC = () => {
-
   // --- Assignment States ---
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [newAssignmentTitle, setNewAssignmentTitle] = useState<string>('');
   const [newAssignmentCourse, setNewAssignmentCourse] = useState<string>('');
   const [newAssignmentDeadline, setNewAssignmentDeadline] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null); // For error messages
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state for fetch
+  const [isAdding, setIsAdding] = useState<boolean>(false); // Loading state for adding new assignment
+  const [error, setError] = useState<string | null>(null); // Error state for both operations
 
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null); // ID of assignment being edited
-  const [editedTitle, setEditedTitle] = useState<string>('');
-  const [editedCourse, setEditedCourse] = useState<string>('');
-  const [editedDeadline, setEditedDeadline] = useState<string>('');
-
-
+  const { logout } = useAuth(); // Get logout from context to handle unauthorized access
 
   // --- Assignment Functions ---
-
-  const fetchAssignments = async () => {
-    setIsLoading(true);
-    setError(null);
+  const handleFetchAssignments = async () => { // Renamed to avoid confusion with service function
+    setError(null); // Clear previous errors
+    setIsLoading(true); // Set loading true
     try {
-      const response = await fetch(`${API_BASE_URL}/assignments`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetchAllAssignments(); // <--- Call service function
+      if (response.success && response.data) {
+        setAssignments(response.data);
+      } else {
+        setError(response.message || 'Failed to load assignments.');
+        if (response.message?.includes('Authentication required')) {
+          console.error('Authentication error fetching assignments. Logging out...');
+          logout(); // Log out if authentication fails (e.g., token expired, not found)
+        }
       }
-      const data: Assignment[] = await response.json();
-      setAssignments(data);
-    } catch (error) {
-      console.error("Failed to fetch assignments:", error);
-      setError("Failed to load assignments. Please try again.");
-      // alert("Failed to load assignments. Ensure the backend is running and CORS is enabled."); // Removed for cleaner UX
+    } catch (err) {
+      console.error("An unexpected error occurred during assignment fetch:", err);
+      setError('An unexpected error occurred while loading assignments.');
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -50,137 +49,49 @@ const AssignmentsPage: React.FC = () => {
       return;
     }
 
-    setError(null);
-    setIsLoading(true);
-
+    // Convert YYYY-MM-DD from input type="date" to ISO 8601 string for backend validation
     const deadlineDate = new Date(newAssignmentDeadline);
-    deadlineDate.setUTCHours(23, 59, 59, 999); // Set to end of day, UTC
+    deadlineDate.setUTCHours(23, 59, 59, 999);
     const formattedDeadline = deadlineDate.toISOString();
 
-    const assignmentToAdd = {
+    const assignmentData = { // Data to send, Omit 'id' as backend generates it
       title: newAssignmentTitle,
       course: newAssignmentCourse,
       deadline: formattedDeadline,
     };
 
+    setError(null); // Clear previous errors
+    setIsAdding(true); // Set adding state
     try {
-      const response = await fetch(`${API_BASE_URL}/assignments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(assignmentToAdd),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error adding assignment.' }));
-        throw new Error(`HTTP error! status: ${response.status}. Message: ${errorData.message}`);
+      const response = await addAssignment(assignmentData); // <--- Call service function
+      if (response.success && response.data) {
+        setNewAssignmentTitle('');
+        setNewAssignmentCourse('');
+        setNewAssignmentDeadline('');
+        handleFetchAssignments(); // Re-fetch to update the list with the new item
+      } else {
+        setError(response.message || 'Failed to add assignment.');
+        if (response.message?.includes('Authentication required')) {
+          console.error('Authentication error adding assignment. Logging out...');
+          logout(); // Log out if authentication fails
+        }
       }
-
-      setNewAssignmentTitle('');
-      setNewAssignmentCourse('');
-      setNewAssignmentDeadline('');
-      fetchAssignments();
-    } catch (error) {
-      console.error("Failed to add assignment:", error);
-      setError(`Failed to add assignment: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteAssignment = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this assignment?')) {
-      return;
-    }
-
-    console.log(`Stub: Attempting to delete assignment with ID: ${id}`);
-    setError(null);
-    setIsLoading(true); // Can also have a specific 'isDeleting' state
-
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Simulate successful deletion: update local state directly
-      setAssignments(prevAssignments => prevAssignments.filter(assignment => assignment.id !== id));
-      console.log(`Stub: Assignment with ID ${id} deleted successfully from local state.`);
     } catch (err) {
-      console.error(`Error deleting assignment ${id}:`, err);
-      setError(`Failed to delete assignment: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("An unexpected error occurred during assignment add:", err);
+      setError('An unexpected error occurred while adding assignment.');
     } finally {
-      setIsLoading(false);
+      setIsAdding(false); // Reset adding state
     }
   };
 
-  const handleEditClick = (assignment: Assignment) => {
-    setEditingAssignmentId(assignment.id);
-    setEditedTitle(assignment.title);
-    setEditedCourse(assignment.course);
-    // Convert backend ISO string (e.g., "2024-03-15T23:59:59.999Z") to "YYYY-MM-DD" for input type="date"
-    setEditedDeadline(assignment.deadline.split('T')[0]);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingAssignmentId(null);
-    setEditedTitle('');
-    setEditedCourse('');
-    setEditedDeadline('');
-  };
-
-  const handleSaveEdit = async (id: string) => {
-    if (!editedTitle || !editedCourse || !editedDeadline) {
-      alert('Please fill in all fields to save the assignment!');
-      return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
-    const updatedDeadlineDate = new Date(editedDeadline);
-    updatedDeadlineDate.setUTCHours(23, 59, 59, 999);
-    const formattedUpdatedDeadline = updatedDeadlineDate.toISOString();
-
-    const updatedAssignment: Assignment = {
-      id: id,
-      title: editedTitle,
-      course: editedCourse,
-      deadline: formattedUpdatedDeadline,
-    };
-
-    console.log(`Stub: Attempting to save assignment with ID: ${id}`, updatedAssignment);
-
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Simulate successful update: update local state directly
-      setAssignments(prevAssignments =>
-        prevAssignments.map(assign => (assign.id === id ? updatedAssignment : assign))
-      );
-      console.log(`Stub: Assignment with ID ${id} updated successfully in local state.`);
-
-      setEditingAssignmentId(null);
-    } catch (err) {
-      console.error(`Error saving assignment ${id}:`, err);
-      setError(`Failed to save assignment: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
+  // Fetch assignments when the component mounts
   useEffect(() => {
-    fetchAssignments();
-  }, []);
-
+    handleFetchAssignments();
+  }, []); // Run only once on mount
 
   return (
     <section className="assignments-section section-card">
       <h2>Assignments</h2>
-
-      {error && <p className="error-message">{error}</p>}
-      {isLoading && <p className="loading-message">Loading assignments...</p>}
 
       {/* Form to Add New Assignment */}
       <h3 className="section-subtitle">Add New Assignment</h3>
@@ -191,7 +102,7 @@ const AssignmentsPage: React.FC = () => {
           value={newAssignmentTitle}
           onChange={(e) => setNewAssignmentTitle(e.target.value)}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
         <input
           type="text"
@@ -199,98 +110,38 @@ const AssignmentsPage: React.FC = () => {
           value={newAssignmentCourse}
           onChange={(e) => setNewAssignmentCourse(e.target.value)}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
         <input
           type="date"
           value={newAssignmentDeadline}
           onChange={(e) => setNewAssignmentDeadline(e.target.value)}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
-        <button type="submit" className="btn btn-primary add-assignment-btn" disabled={isLoading}>
-          {isLoading ? 'Adding...' : 'Add Assignment'}
+        <button type="submit" className="btn btn-primary" disabled={isAdding}>
+          {isAdding ? 'Adding...' : 'Add Assignment'}
         </button>
       </form>
 
+      {/* Error Display */}
+      {error && <p className="error-message">{error}</p>}
+
       {/* List of Existing Assignments */}
       <h3 className="section-subtitle">Your Assignments</h3>
-      {assignments.length === 0 && !isLoading ? (
+      {isLoading ? (
+        <p className="loading-message">Loading assignments...</p>
+      ) : assignments.length === 0 ? (
         <p className="empty-message">No assignments recorded. Add one above!</p>
       ) : (
         <ul className="item-list">
           {assignments.map((assignment) => (
             <li key={assignment.id} className="item-card">
-              {editingAssignmentId === assignment.id ? (
-                // --- Edit Mode UI ---
-                <div className="edit-form-container">
-                  <input
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className="form-input"
-                    placeholder="Title"
-                    disabled={isLoading}
-                  />
-                  <input
-                    type="text"
-                    value={editedCourse}
-                    onChange={(e) => setEditedCourse(e.target.value)}
-                    className="form-input"
-                    placeholder="Course"
-                    disabled={isLoading}
-                  />
-                  <input
-                    type="date"
-                    value={editedDeadline}
-                    onChange={(e) => setEditedDeadline(e.target.value)}
-                    className="form-input"
-                    placeholder="Deadline"
-                    disabled={isLoading}
-                  />
-                  <div className="edit-buttons">
-                    <button
-                      onClick={() => handleSaveEdit(assignment.id)}
-                      className="btn btn-primary save-btn"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="btn btn-secondary cancel-btn"
-                      disabled={isLoading}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // --- View Mode UI ---
-                <>
-                  <div className="item-header">
-                    <strong>{assignment.title}</strong>
-                    <span className="item-tag">{assignment.course}</span>
-                  </div>
-                  <p className="item-meta">Due: {assignment.deadline.split('T')[0]}</p>
-                  <div className="item-actions">
-                    <button
-                      onClick={() => handleEditClick(assignment)}
-                      className="btn btn-info edit-btn"
-                      disabled={isLoading}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAssignment(assignment.id)}
-                      className="btn btn-danger delete-btn"
-                      disabled={isLoading}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </>
-              )}
+              <div className="item-header">
+                <strong>{assignment.title}</strong>
+                <span className="item-tag">{assignment.course}</span>
+              </div>
+              <p className="item-meta">Due: {assignment.deadline.split('T')[0]}</p>
             </li>
           ))}
         </ul>
