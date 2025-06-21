@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar'; 
+import ProtectedRoute from './components/ProtectedRoute';
 
 import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
@@ -53,22 +54,22 @@ function App() {
         </div>
       </header>
 
-      <main className="main-layout-container container"> {/* <--- NEW CLASS HERE */}
-        {isAuthenticated && <Sidebar />} {/* <--- Render Sidebar ONLY if authenticated */}
-        <div className="main-content-view"> {/* <--- NEW WRAPPER FOR ROUTES */}
+      <main className="main-layout-container container"> 
+        {isAuthenticated && <Sidebar />} 
+        <div className="main-content-view"> 
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
 
-            {/* Protected Routes (will be truly protected in Task 10) */}
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/assignments" element={<AssignmentsPage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/courses" element={<CoursesPage />} />
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/assignments" element={<ProtectedRoute><AssignmentsPage /></ProtectedRoute>} />
+            <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
+            <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
 
             {/* Default route - redirect based on auth status */}
-            <Route path="/" element={isAuthenticated ? <DashboardPage /> : <LoginPage />} />
+            <Route path="/" element={isAuthenticated ? <ProtectedRoute><DashboardPage /></ProtectedRoute> : <LoginPage />} />
 
             {/* Fallback for unmatched routes */}
             <Route path="*" element={<div style={{ padding: '20px', textAlign: 'center' }}><h2>404 - Page Not Found</h2><p>The page you are looking for does not exist.</p></div>} />
