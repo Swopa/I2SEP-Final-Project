@@ -152,8 +152,15 @@ export const updateAssignmentDb = (
   });
 };
 
+/**
+ * Retrieves a specific assignment by its ID for a specific user.
+ * @param db The SQLite database connection instance.
+ * @param assignmentId The ID of the assignment to retrieve.
+ * @param userId The ID of the user who should own the assignment.
+ * @returns A promise that resolves to the Assignment object if found and owned by user, or null otherwise.
+ */
 export const getAssignmentByIdAndUserIdDb = (
-    db: sqlite3.Database,
+  db: sqlite3.Database,
   assignmentId: string,
   userId: string
 ): Promise<Assignment | null> => {
@@ -164,12 +171,33 @@ export const getAssignmentByIdAndUserIdDb = (
         console.error('Error fetching assignment by id and userId from DB:', err.message);
         reject(err);
       } else {
-        if (!row) {
-          resolve(null); // Not found or not owned
-        } else {
-          resolve(row);
-        }
+        resolve(row || null);
       }
     });
   });
-}
+};
+
+/**
+ * Deletes a specific assignment for a specific user.
+ * @param db The SQLite database connection instance.
+ * @param assignmentId The ID of the assignment to delete.
+ * @param userId The ID of the user who owns the assignment.
+ * @returns A promise that resolves to true if deleted, false if not found/not owned.
+ */
+export const deleteAssignmentDb = (
+  db: sqlite3.Database,
+  assignmentId: string,
+  userId: string
+): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    const sql = "DELETE FROM assignments WHERE id = ? AND userId = ?";
+    db.run(sql, [assignmentId, userId], function (err) {
+      if (err) {
+        console.error('Error deleting assignment from DB:', err.message);
+        reject(err);
+      } else {
+        resolve(this.changes > 0); // True if one or more rows were deleted
+      }
+    });
+  });
+};
