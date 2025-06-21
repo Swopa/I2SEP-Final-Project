@@ -591,8 +591,6 @@ const startServer = async () => {
     //    The 'db' variable is guaranteed to be non-null here.
     await initializeUserTable(db);
     await initializeCourseTable(db);
-    // TODO (in later tasks):
-    // await initializeCourseTable(db);
     await initializeAssignmentTable(db);
     // await initializeNoteTable(db);
     console.log(
