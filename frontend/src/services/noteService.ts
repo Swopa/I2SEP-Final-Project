@@ -122,7 +122,51 @@ export const updateNote = async (id: string, updatedFields: Partial<Omit<Note, '
   }
 };
 
-export const deleteNote = async (id: string): Promise<ApiResponse<void>> => {
-    console.log(`NoteService Stub: Deleting note ${id}`);
-    return { success: true, message: 'Delete not yet implemented.' };
+/**
+ * Deletes a note from the backend.
+ * Requires authentication token.
+ * @param id The ID of the note to delete.
+ */
+export const deleteNote = async (id: string): Promise<ApiResponse<void>> => { // <--- UPDATED
+  const token = getToken();
+  if (!token) {
+    return { success: false, message: 'Authentication required. No token found.' };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/notes/${id}`, { // <--- Backend expects ID in URL
+      method: 'DELETE', // HTTP DELETE method
+      headers: {
+        'Authorization': `Bearer ${token}`, // Attach the JWT token
+      },
+    });
+
+    // Backend might return an empty body for successful delete (204 No Content)
+    // or a JSON object with a message.
+    // We try to parse JSON, but handle if it's empty.
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (e) {
+        // If response is 204 No Content, response.json() will throw an error
+        // We can ignore this for successful deletions
+        if (response.status !== 204) {
+            console.warn('Response was not JSON but not 204 No Content:', e);
+        }
+    }
+
+
+    if (response.ok) { // Check for 2xx status codes (e.g., 200 OK, 204 No Content)
+      return { success: true, message: (data as any).message || 'Note deleted successfully.' };
+    } else {
+      return {
+        success: false,
+        message: (data as any).message || `Failed to delete note: ${response.statusText}`,
+        error: (data as any).error,
+      };
+    }
+  } catch (error) {
+    console.error(`Network or unexpected error deleting note ${id}:`, error);
+    return { success: false, message: 'Network error or server unavailable.' };
+  }
 };

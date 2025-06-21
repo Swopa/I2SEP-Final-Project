@@ -1,11 +1,9 @@
-// frontend/src/pages/NotesPage.tsx
-
 import React, { useState, useEffect } from 'react';
 import type { Note } from '../types';
 import '../App.css';
-import { fetchAllNotes, addNote, updateNote } from '../services/noteService'; // <--- Import updateNote
+import { fetchAllNotes, addNote, updateNote, deleteNote } from '../services/noteService'; // <--- Import deleteNote
 import { useAuth } from '../context/AuthContext';
-import EditNoteModal from '../components/EditNoteModal'; // <--- Import the new modal component
+import EditNoteModal from '../components/EditNoteModal';
 
 const NotesPage: React.FC = () => {
   // --- Note States ---
@@ -21,8 +19,8 @@ const NotesPage: React.FC = () => {
   // --- State for Edit Modal ---
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [currentNoteToEdit, setCurrentNoteToEdit] = useState<Note | null>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false); // Loading state for modal save
-  const [editError, setEditError] = useState<string | null>(null); // Error for modal save
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { logout } = useAuth();
 
@@ -73,7 +71,7 @@ const NotesPage: React.FC = () => {
         setNewNoteTitle('');
         setNewNoteContent('');
         setNewNoteLink('');
-        handleFetchNotes();
+        handleFetchNotes(); // Re-fetch to update the list
       } else {
         setError(response.message || 'Failed to add note.');
         if (response.message?.includes('Authentication required')) {
@@ -91,26 +89,26 @@ const NotesPage: React.FC = () => {
 
   // --- Edit Logic ---
   const handleEditClick = (note: Note) => {
-    setCurrentNoteToEdit(note); // Set the note to be edited
-    setIsEditModalOpen(true); // Open the modal
-    setEditError(null); // Clear any previous modal errors
+    setCurrentNoteToEdit(note);
+    setIsEditModalOpen(true);
+    setEditError(null);
   };
 
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
-    setCurrentNoteToEdit(null); // Clear the note being edited
+    setCurrentNoteToEdit(null);
     setEditError(null);
   };
 
   const handleSaveEditedNote = async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
-    setEditError(null); // Clear previous edit errors
-    setIsSavingEdit(true); // Set saving state
+    setEditError(null);
+    setIsSavingEdit(true);
     try {
-      const response = await updateNote(id, updatedFields); // Call update service
+      const response = await updateNote(id, updatedFields);
       if (response.success) {
         console.log('Note updated successfully!');
-        handleCloseEditModal(); // Close modal on success
-        handleFetchNotes(); // Re-fetch list to show changes
+        handleCloseEditModal();
+        handleFetchNotes();
       } else {
         setEditError(response.message || 'Failed to save changes.');
         if (response.message?.includes('Authentication required')) {
@@ -122,7 +120,35 @@ const NotesPage: React.FC = () => {
       console.error("An unexpected error occurred during note update:", err);
       setEditError('An unexpected error occurred while saving changes.');
     } finally {
-      setIsSavingEdit(false); // Reset saving state
+      setIsSavingEdit(false);
+    }
+  };
+
+  // --- Delete Logic ---
+  const handleDeleteClick = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete the note "${title}"? This action cannot be undone.`)) {
+      return; // User cancelled
+    }
+
+    setError(null); // Clear main page error for new operation
+    setIsLoading(true); // Show loading state for entire list while deleting
+    try {
+      const response = await deleteNote(id); // Call delete service
+      if (response.success) {
+        console.log('Note deleted successfully!');
+        handleFetchNotes(); // Re-fetch list to show changes
+      } else {
+        setError(response.message || 'Failed to delete note.');
+        if (response.message?.includes('Authentication required')) {
+            console.error('Authentication error deleting note. Logging out...');
+            logout();
+        }
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred during note deletion:", err);
+      setError('An unexpected error occurred while deleting note.');
+    } finally {
+      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -200,10 +226,17 @@ const NotesPage: React.FC = () => {
                 <button
                   className="btn btn-secondary btn-small"
                   onClick={() => handleEditClick(note)}
+                  disabled={isLoading} // Disable if overall loading (e.g., during delete)
                 >
                   Edit
                 </button>
-                {/* Delete button will go here in Task C20 */}
+                <button
+                  className="btn btn-danger btn-small" // <--- NEW: Delete button
+                  onClick={() => handleDeleteClick(note.id, note.title)}
+                  disabled={isLoading} // Disable if overall loading
+                >
+                  Delete
+                </button>
               </div>
             </li>
           ))}
@@ -211,7 +244,7 @@ const NotesPage: React.FC = () => {
       )}
 
       {/* Edit Note Modal */}
-      {currentNoteToEdit && ( // Only render if a note is selected for editing
+      {currentNoteToEdit && (
         <EditNoteModal
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
