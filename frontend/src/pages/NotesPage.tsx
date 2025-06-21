@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { Note } from '../types';
-import '../App.css';
+import type { Note } from '../types'; // Import Note type
+import '../App.css'; // Common styling
+import { fetchAllNotes, addNote } from '../services/noteService'; // Import service functions
+import { useAuth } from '../context/AuthContext'; // To handle re-authentication/redirect
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://localhost:3001'; // Base URL for your backend API
 
 const NotesPage: React.FC = () => {
   // --- Note States ---
@@ -11,32 +13,32 @@ const NotesPage: React.FC = () => {
   const [newNoteTitle, setNewNoteTitle] = useState<string>('');
   const [newNoteContent, setNewNoteContent] = useState<string>('');
   const [newNoteLink, setNewNoteLink] = useState<string>(''); // Optional link
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Initial loading state for fetch
+  const [isAdding, setIsAdding] = useState<boolean>(false); // Loading state for adding new note
+  const [error, setError] = useState<string | null>(null); // Error state for both operations
 
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null); // ID of note being edited
-  const [editedNoteCourse, setEditedNoteCourse] = useState<string>('');
-  const [editedNoteTitle, setEditedNoteTitle] = useState<string>('');
-  const [editedNoteContent, setEditedNoteContent] = useState<string>('');
-  const [editedNoteLink, setEditedNoteLink] = useState<string>('');
+  const { logout } = useAuth(); // Get logout from context to handle unauthorized access
 
   // --- Note Functions ---
-  const fetchNotes = async () => {
-    setIsLoading(true);
-    setError(null);
+  const handleFetchNotes = async () => { // Renamed for clarity
+    setError(null); // Clear previous errors
+    setIsLoading(true); // Set loading true
     try {
-      const response = await fetch(`${API_BASE_URL}/notes`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetchAllNotes(); // Call service function
+      if (response.success && response.data) {
+        setNotes(response.data);
+      } else {
+        setError(response.message || 'Failed to load notes.');
+        if (response.message?.includes('Authentication required')) {
+          console.error('Authentication error fetching notes. Logging out...');
+          logout(); // Log out if authentication fails (e.g., token expired, not found)
+        }
       }
-      const data: Note[] = await response.json();
-      setNotes(data);
-    } catch (error) {
-      console.error("Failed to fetch notes:", error);
-      setError("Failed to load notes. Please try again.");
-      // alert("Failed to load notes. Ensure the backend is running and CORS is enabled."); // Removed for cleaner UX
+    } catch (err) {
+      console.error("An unexpected error occurred during note fetch:", err);
+      setError('An unexpected error occurred while loading notes.');
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -48,139 +50,46 @@ const NotesPage: React.FC = () => {
       return;
     }
 
-    setError(null);
-    setIsLoading(true);
-
-    const noteToAdd = {
+    const noteData = { // Data to send, Omit 'id' and 'createdAt' as backend generates them
       course: newNoteCourse,
       title: newNoteTitle,
       content: newNoteContent,
-      link: newNoteLink || undefined,
+      link: newNoteLink || undefined, // Send undefined if link is empty
     };
 
+    setError(null); // Clear previous errors
+    setIsAdding(true); // Set adding state
     try {
-      const response = await fetch(`${API_BASE_URL}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(noteToAdd),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error adding note.' }));
-        throw new Error(`HTTP error! status: ${response.status}. Message: ${errorData.message}`);
+      const response = await addNote(noteData); // Call service function
+      if (response.success && response.data) {
+        setNewNoteCourse('');
+        setNewNoteTitle('');
+        setNewNoteContent('');
+        setNewNoteLink('');
+        handleFetchNotes(); // Re-fetch to update the list with the new item
+      } else {
+        setError(response.message || 'Failed to add note.');
+        if (response.message?.includes('Authentication required')) {
+          console.error('Authentication error adding note. Logging out...');
+          logout(); // Log out if authentication fails
+        }
       }
-
-      setNewNoteCourse('');
-      setNewNoteTitle('');
-      setNewNoteContent('');
-      setNewNoteLink('');
-      fetchNotes();
-    } catch (error) {
-      console.error("Failed to add note:", error);
-      setError(`Failed to add note: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const handleDeleteNote = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this note?')) {
-      return;
-    }
-
-    console.log(`Stub: Attempting to delete note with ID: ${id}`);
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Simulate successful deletion: update local state directly
-      setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
-      console.log(`Stub: Note with ID ${id} deleted successfully from local state.`);
     } catch (err) {
-      console.error(`Error deleting note ${id}:`, err);
-      setError(`Failed to delete note: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("An unexpected error occurred during note add:", err);
+      setError('An unexpected error occurred while adding note.');
     } finally {
-      setIsLoading(false);
+      setIsAdding(false); // Reset adding state
     }
   };
 
-
-  const handleEditClick = (note: Note) => {
-    setEditingNoteId(note.id);
-    setEditedNoteCourse(note.course);
-    setEditedNoteTitle(note.title);
-    setEditedNoteContent(note.content);
-    setEditedNoteLink(note.link || '');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingNoteId(null);
-    setEditedNoteCourse('');
-    setEditedNoteTitle('');
-    setEditedNoteContent('');
-    setEditedNoteLink('');
-  };
-
-  const handleSaveEdit = async (id: string) => {
-    if (!editedNoteCourse || !editedNoteTitle || !editedNoteContent) {
-      alert('Please fill in course, title, and content to save the note!');
-      return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
-    const updatedNote: Note = {
-      id: id,
-      course: editedNoteCourse,
-      title: editedNoteTitle,
-      content: editedNoteContent,
-      link: editedNoteLink || undefined,
-      createdAt: notes.find(n => n.id === id)?.createdAt || new Date().toISOString(),
-    };
-
-    console.log(`Stub: Attempting to save note with ID: ${id}`, updatedNote);
-
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Simulate successful update: update local state directly
-      setNotes(prevNotes =>
-        prevNotes.map(note => (note.id === id ? updatedNote : note))
-      );
-      console.log(`Stub: Note with ID ${id} updated successfully in local state.`);
-
-      setEditingNoteId(null);
-    } catch (err) {
-      console.error(`Error saving note ${id}:`, err);
-      setError(`Failed to save note: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-
+  // Fetch notes when the component mounts
   useEffect(() => {
-    fetchNotes();
-  }, []);
-
-
-
+    handleFetchNotes();
+  }, []); // Run only once on mount
 
   return (
     <section className="notes-section section-card">
       <h2>Notes</h2>
-
-      {error && <p className="error-message">{error}</p>}
-      {isLoading && <p className="loading-message">Loading notes...</p>}
 
       {/* Form to Add New Note */}
       <h3 className="section-subtitle">Add New Note</h3>
@@ -191,7 +100,7 @@ const NotesPage: React.FC = () => {
           value={newNoteCourse}
           onChange={(e) => setNewNoteCourse(e.target.value)}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
         <input
           type="text"
@@ -199,7 +108,7 @@ const NotesPage: React.FC = () => {
           value={newNoteTitle}
           onChange={(e) => setNewNoteTitle(e.target.value)}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
         <textarea
           placeholder="Note Content"
@@ -207,116 +116,52 @@ const NotesPage: React.FC = () => {
           onChange={(e) => setNewNoteContent(e.target.value)}
           rows={4}
           required
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         ></textarea>
         <input
           type="url"
           placeholder="Related Link (optional)"
           value={newNoteLink}
           onChange={(e) => setNewNoteLink(e.target.value)}
-          disabled={isLoading}
+          disabled={isAdding} // Disable inputs while adding
         />
-        <button type="submit" className="btn btn-primary add-note-btn" disabled={isLoading}>
-          {isLoading ? 'Adding...' : 'Add Note'}
+        <button type="submit" className="btn btn-primary" disabled={isAdding}>
+          {isAdding ? 'Adding...' : 'Add Note'}
         </button>
       </form>
 
+      {/* Error Display */}
+      {error && <p className="error-message">{error}</p>}
+
       {/* List of Existing Notes */}
       <h3 className="section-subtitle">Your Notes</h3>
-      {notes.length === 0 && !isLoading ? (
+      {isLoading ? (
+        <p className="loading-message">Loading notes...</p>
+      ) : notes.length === 0 ? (
         <p className="empty-message">No notes recorded. Add one above!</p>
       ) : (
         <ul className="item-list">
           {notes.map((note) => (
             <li key={note.id} className="item-card">
-              {editingNoteId === note.id ? (
-                // --- Edit Mode UI for Note ---
-                <div className="edit-form-container">
-                  <input
-                    type="text"
-                    value={editedNoteCourse}
-                    onChange={(e) => setEditedNoteCourse(e.target.value)}
-                    className="form-input"
-                    placeholder="Course"
-                    disabled={isLoading}
-                  />
-                  <input
-                    type="text"
-                    value={editedNoteTitle}
-                    onChange={(e) => setEditedNoteTitle(e.target.value)}
-                    className="form-input"
-                    placeholder="Title"
-                    disabled={isLoading}
-                  />
-                  <textarea
-                    value={editedNoteContent}
-                    onChange={(e) => setEditedNoteContent(e.target.value)}
-                    className="form-input"
-                    placeholder="Content"
-                    rows={4}
-                    disabled={isLoading}
-                  ></textarea>
-                  <input
-                    type="url"
-                    value={editedNoteLink}
-                    onChange={(e) => setEditedNoteLink(e.target.value)}
-                    className="form-input"
-                    placeholder="Link"
-                    disabled={isLoading}
-                  />
-                  <div className="edit-buttons">
-                    <button
-                      onClick={() => handleSaveEdit(note.id)}
-                      className="btn btn-primary save-btn"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="btn btn-secondary cancel-btn"
-                      disabled={isLoading}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // --- View Mode UI for Note ---
-                <>
-                  <div className="item-header">
-                    <strong>{note.title}</strong>
-                    <span className="item-tag">{note.course}</span>
-                  </div>
-                  <p className="item-content">{note.content}</p>
-                  {note.link && (
-                    <p className="item-link"><a href={note.link} target="_blank" rel="noopener noreferrer">View Link</a></p>
-                  )}
-                  <small className="item-meta">Created: {new Date(note.createdAt).toLocaleDateString()}</small>
-                  <div className="item-actions">
-                    <button
-                      onClick={() => handleEditClick(note)}
-                      className="btn btn-info edit-btn"
-                      disabled={isLoading}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteNote(note.id)}
-                      className="btn btn-danger delete-btn"
-                      disabled={isLoading}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </>
+              <div className="item-header">
+                <strong>{note.title}</strong>
+                <span className="item-tag">{note.course}</span>
+              </div>
+              <p className="item-content">{note.content}</p>
+              {note.link && (
+                <p className="item-link"><a href={note.link} target="_blank" rel="noopener noreferrer">View Link</a></p>
               )}
+              <small className="item-meta">Created: {new Date(note.createdAt).toLocaleDateString()}</small>
+              {/* Edit/Delete buttons will go here in later tasks */}
+              <div className="item-actions">
+                {/* <button className="btn btn-secondary btn-small">Edit</button> */}
+                {/* <button className="btn btn-danger btn-small">Delete</button> */}
+              </div>
             </li>
           ))}
         </ul>
       )}
     </section>
-
   );
 };
 
