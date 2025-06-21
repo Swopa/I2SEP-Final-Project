@@ -480,7 +480,29 @@ app.get('/assignments', authenticateToken, async (req: Request, res: Response) =
   }
 });
 
+// GET /assignments/:assignmentId - Retrieve a specific assignment for the authenticated user
+app.get('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
 
+  try {
+    const { assignmentId } = req.params;
+    const userId = req.user.userId;
+
+    const assignment = await getAssignmentByIdAndUserIdDb(db, assignmentId, userId);
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found or access denied.' });
+    }
+
+    res.status(200).json(assignment);
+
+  } catch (error) {
+    console.error(`Error fetching assignment ${req.params.assignmentId}:`, error);
+    // Generic error response
+    res.status(500).json({ message: 'Failed to fetch assignment.' });
+  }
+});
 
 // PUT /assignments/:assignmentId - Update a specific assignment for the authenticated user
 app.put('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
@@ -514,6 +536,29 @@ app.put('/assignments/:assignmentId', authenticateToken, async (req: Request, re
   } catch (error) {
     console.error(`Error updating assignment ${req.params.assignmentId}:`, error);
     res.status(500).json({ message: 'Failed to update assignment.' });
+  }
+});
+
+// DELETE /assignments/:assignmentId - Delete a specific assignment for the authenticated user
+app.delete('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { assignmentId } = req.params;
+    const userId = req.user.userId;
+
+    const wasDeleted = await deleteAssignmentDb(db, assignmentId, userId);
+
+    if (!wasDeleted) {
+      return res.status(404).json({ message: 'Assignment not found or access denied.' });
+    }
+
+    res.status(204).send(); // 204 No Content for successful DELETE
+
+  } catch (error) {
+    console.error(`Error deleting assignment ${req.params.assignmentId}:`, error);
+    res.status(500).json({ message: 'Failed to delete assignment.' });
   }
 });
 
@@ -565,7 +610,9 @@ const startServer = async () => {
       console.log("  GET  /courses (Protected)");
       console.log('  POST /assignments (Protected)');
       console.log('  GET  /assignments (Protected)');
+      console.log('  GET  /assignments/:assignmentId (Protected)');
       console.log('  PUT  /assignments/:assignmentId (Protected)');
+      console.log('  DELETE /assignments/:assignmentId (Protected)');
       // Add other routes to this log as they become functional
     });
 
