@@ -11,10 +11,13 @@ const NotesPage: React.FC = () => {
   const [newNoteTitle, setNewNoteTitle] = useState<string>('');
   const [newNoteContent, setNewNoteContent] = useState<string>('');
   const [newNoteLink, setNewNoteLink] = useState<string>(''); // Optional link
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // --- Note Functions ---
-
   const fetchNotes = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/notes`);
       if (!response.ok) {
@@ -24,7 +27,10 @@ const NotesPage: React.FC = () => {
       setNotes(data);
     } catch (error) {
       console.error("Failed to fetch notes:", error);
+      setError("Failed to load notes. Please try again.");
       // alert("Failed to load notes. Ensure the backend is running and CORS is enabled."); // Removed for cleaner UX
+    }finally{
+      setIsLoading(false);
     }
   };
 
@@ -35,6 +41,9 @@ const NotesPage: React.FC = () => {
       alert('Please fill in course, title, and content for the note!');
       return;
     }
+
+    setError(null);
+    setIsLoading(true);
 
     const noteToAdd = {
       course: newNoteCourse,
@@ -64,7 +73,34 @@ const NotesPage: React.FC = () => {
       fetchNotes();
     } catch (error) {
       console.error("Failed to add note:", error);
-      alert(`Failed to add note: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
+      setError(`Failed to add note: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
+    }finally{
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleDeleteNote = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this note?')) {
+      return; 
+    }
+
+    console.log(`Stub: Attempting to delete note with ID: ${id}`);
+    setError(null);
+    setIsLoading(true); 
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Simulate successful deletion: update local state directly
+      setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
+      console.log(`Stub: Note with ID ${id} deleted successfully from local state.`);
+    } catch (err) {
+      console.error(`Error deleting note ${id}:`, err);
+      setError(`Failed to delete note: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,6 +115,9 @@ const NotesPage: React.FC = () => {
         <section className="notes-section section-card">
           <h2>Notes</h2>
 
+          {error && <p className="error-message">{error}</p>}
+      {isLoading && <p className="loading-message">Loading notes...</p>}
+
           {/* Form to Add New Note */}
           <h3 className="section-subtitle">Add New Note</h3>
           <form onSubmit={handleAddNote} className="add-item-form">
@@ -88,6 +127,7 @@ const NotesPage: React.FC = () => {
               value={newNoteCourse}
               onChange={(e) => setNewNoteCourse(e.target.value)}
               required
+              disabled={isLoading}
             />
             <input
               type="text"
@@ -95,6 +135,7 @@ const NotesPage: React.FC = () => {
               value={newNoteTitle}
               onChange={(e) => setNewNoteTitle(e.target.value)}
               required
+              disabled={isLoading}
             />
             <textarea
               placeholder="Note Content"
@@ -102,19 +143,23 @@ const NotesPage: React.FC = () => {
               onChange={(e) => setNewNoteContent(e.target.value)}
               rows={4}
               required
+              disabled={isLoading}
             ></textarea>
             <input
               type="url"
               placeholder="Related Link (optional)"
               value={newNoteLink}
               onChange={(e) => setNewNoteLink(e.target.value)}
+              disabled={isLoading}
             />
-            <button type="submit" className="btn btn-primary">Add Note</button>
+            <button type="submit" className="btn btn-primary add-note-btn" disabled={isLoading}>
+              {isLoading ? 'Adding...' : 'Add Note'}
+              </button>
           </form>
 
           {/* List of Existing Notes */}
           <h3 className="section-subtitle">Your Notes</h3>
-          {notes.length === 0 ? (
+          {notes.length === 0 && !isLoading ? (
             <p className="empty-message">No notes recorded. Add one above!</p>
           ) : (
             <ul className="item-list">
@@ -129,6 +174,13 @@ const NotesPage: React.FC = () => {
                     <p className="item-link"><a href={note.link} target="_blank" rel="noopener noreferrer">View Link</a></p>
                   )}
                   <small className="item-meta">Created: {new Date(note.createdAt).toLocaleDateString()}</small>
+                  <button
+                onClick={() => handleDeleteNote(note.id)} 
+                className="btn btn-danger delete-btn" 
+                disabled={isLoading}
+              >
+                Delete
+              </button>
                 </li>
               ))}
             </ul>

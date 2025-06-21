@@ -130,6 +130,7 @@ const AssignmentsPage: React.FC = () => {
               value={newAssignmentTitle}
               onChange={(e) => setNewAssignmentTitle(e.target.value)}
               required
+              disabled={isLoading}
             />
             <input
               type="text"
@@ -137,12 +138,14 @@ const AssignmentsPage: React.FC = () => {
               value={newAssignmentCourse}
               onChange={(e) => setNewAssignmentCourse(e.target.value)}
               required
+              disabled={isLoading}
             />
             <input
               type="date"
               value={newAssignmentDeadline}
               onChange={(e) => setNewAssignmentDeadline(e.target.value)}
               required
+              disabled={isLoading}
             />
             <button type="submit" className="btn btn-primary add-assignment-btn" disabled={isLoading}>
               {isLoading ? 'Adding...' : 'Add Assignment'}
