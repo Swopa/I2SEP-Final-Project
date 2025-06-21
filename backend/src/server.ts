@@ -11,6 +11,7 @@ import { findUserByEmail, createUser } from "./services/user.service"; // Import
 import { v4 as uuidv4 } from "uuid";
 import { authenticateToken } from "./middleware/auth.middleware";
 import { Course, NewCourseData } from "./models/course.model";
+import { Note, NoteDataPayload } from './models/note.model';
 import {
   createCourseDb,
   getCoursesByUserIdDb,
@@ -19,12 +20,15 @@ import {
   deleteCourseDb,
 } from "./services/course.service";
 
+import {createNoteDb, getNotesByUserIdDb,} from "./services/note.service"
+
 // Database related imports
 import {
   getDbConnection,
   closeDbConnection,
   initializeUserTable,
   initializeCourseTable,
+  initializeNoteTable,
 } from "./database";
 
 import dotenv from 'dotenv';
@@ -74,6 +78,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     ...( !isProduction && { stack: err.stack } )
   });
 });
+
+
+
+
 
 // --- Database Instance ---
 // This will hold our database connection instance once initialized.
@@ -399,6 +407,53 @@ app.delete('/courses/:courseId', authenticateToken, async (req: Request, res: Re
 });
 
 
+//-----Note endpoint
+
+//POST
+app.post('/notes', authenticateToken, async (req: Request, res: Response) => {
+  if (!db || !req.user) {
+    return res.status(503).json({ message: 'Server or user session error.' });
+  }
+  try {
+    // Expecting title, content, and optionally course, link from req.body
+    const noteData = req.body as NoteDataPayload;
+
+    if (!noteData.title || !noteData.content) {
+      return res.status(400).json({ message: 'Title and content are required for a note.' });
+    }
+    // Optional: Add validation for 'link' if present (e.g., is it a valid URL format?)
+    // Optional: Add validation for 'course' if present (e.g., string length)
+
+    const newNote = await createNoteDb(db, req.user.userId, noteData);
+    res.status(201).json(newNote);
+  } catch (error) {
+    console.error("Error creating note:", error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: "Failed to create note.", error: error.message });
+    } else {
+        res.status(500).json({ message: "Failed to create note due to an unknown error." });
+    }
+  }
+});
+
+app.get('/notes', authenticateToken, async (req: Request, res: Response) => {
+  if (!db || !req.user) {
+    return res.status(503).json({ message: 'Server or user session error.' });
+  }
+  try {
+    const userNotes = await getNotesByUserIdDb(db, req.user.userId);
+    res.status(200).json(userNotes);
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    if (error instanceof Error) {
+        res.status(500).json({ message: "Failed to fetch notes.", error: error.message });
+    } else {
+        res.status(500).json({ message: "Failed to fetch notes due to an unknown error." });
+    }
+  }
+});
+
+
 // TODO: Assignment endpoints (to be re-implemented using 'db')
 /*
 app.get('/assignments', (req: Request, res: Response) => {
@@ -441,6 +496,7 @@ const startServer = async () => {
     //    The 'db' variable is guaranteed to be non-null here.
     await initializeUserTable(db);
     await initializeCourseTable(db);
+    await initializeNoteTable(db);
     // TODO (in later tasks):
     // await initializeCourseTable(db);
     // await initializeAssignmentTable(db);
