@@ -232,6 +232,51 @@ body {
   transform: translateY(0);
 }
 
+.btn-info { /* For Edit button */
+  background-color: var(--secondary-color); /* Blue for info/edit */
+  color: #ffffff;
+  margin-top: var(--spacing-unit);
+  padding: 8px 15px; /* Consistent padding with danger button */
+  font-size: 0.9em;
+}
+
+.btn-info:hover {
+  background-color: #1976d2; /* Darker blue */
+  transform: translateY(-1px);
+}
+
+.btn-secondary { /* For Cancel button */
+  background-color: #6c757d; /* Gray */
+  color: #ffffff;
+  padding: 8px 15px;
+  font-size: 0.9em;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+
+.edit-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit) / 2; /* Space between form inputs */
+  padding-bottom: var(--spacing-unit); /* Space before buttons */
+}
+
+.edit-form-container .form-input {
+  /* Inherits from .form-input, but can add specific overrides here if needed */
+  margin-bottom: 0; /* Remove default margin */
+}
+
+.edit-buttons {
+  display: flex;
+  gap: var(--spacing-unit) / 2;
+  margin-top: var(--spacing-unit) / 2;
+  justify-content: flex-end; /* Align buttons to the right */
+}
+
 .add-assignment-btn, .add-note-btn {
   width: 100%;
   margin-top: var(--spacing-unit);
@@ -239,10 +284,6 @@ body {
   font-size: 1.1em;
 }
 
-button:disabled, input:disabled, textarea:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 
 /* --- Item Lists --- */
@@ -262,7 +303,14 @@ button:disabled, input:disabled, textarea:disabled {
   transition: transform 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
-  position: relative;
+  justify-content: space-between;
+}
+
+.item-actions {
+  display: flex;
+  gap: var(--spacing-unit) / 2; /* Space between buttons */
+  margin-top: var(--spacing-unit); /* Space from content above */
+  justify-content: flex-end; /* Align buttons to the right */
 }
 
 .item-card .item-header {
