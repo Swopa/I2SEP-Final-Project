@@ -2,7 +2,7 @@ import React, {useState , useEffect} from 'react';
 import type { Assignment } from '../types';
 import '../App.css';
 
-const API_BASE_URL = 'https://localhost:3001';
+const API_BASE_URL = 'http://localhost:3001';
 
 const AssignmentsPage: React.FC = () => {
 
@@ -11,6 +11,8 @@ const AssignmentsPage: React.FC = () => {
     const [newAssignmentTitle, setNewAssignmentTitle] = useState<string>('');
     const [newAssignmentCourse, setNewAssignmentCourse] = useState<string>('');
     const [newAssignmentDeadline, setNewAssignmentDeadline] = useState<string>('');
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null); // For error messages
 
 
     // --- Assignment Functions ---
@@ -25,7 +27,10 @@ const AssignmentsPage: React.FC = () => {
           setAssignments(data);
         } catch (error) {
           console.error("Failed to fetch assignments:", error);
+          setError("Failed to load assignments. Please try again.");
           // alert("Failed to load assignments. Ensure the backend is running and CORS is enabled."); // Removed for cleaner UX
+        }finally{
+          setIsLoading(false);
         }
       };
     
@@ -36,6 +41,9 @@ const AssignmentsPage: React.FC = () => {
           alert('Please fill in all assignment fields (Title, Course, Deadline)!');
           return;
         }
+
+        setError(null);
+        setIsLoading(true);
     
         const deadlineDate = new Date(newAssignmentDeadline);
         deadlineDate.setUTCHours(23, 59, 59, 999); // Set to end of day, UTC
@@ -67,12 +75,40 @@ const AssignmentsPage: React.FC = () => {
           fetchAssignments();
         } catch (error) {
           console.error("Failed to add assignment:", error);
-          alert(`Failed to add assignment: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
+          setError(`Failed to add assignment: ${error instanceof Error ? error.message : String(error)}. Check backend console.`);
+        }finally{
+          setIsLoading(false);
         }
       };
 
+      const handleDeleteAssignment = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this assignment?')) {
+      return; 
+    }
 
-      // Fetch assignments when the component mounts
+    console.log(`Stub: Attempting to delete assignment with ID: ${id}`);
+    setError(null);
+    setIsLoading(true); // Can also have a specific 'isDeleting' state
+
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Simulate successful deletion: update local state directly
+      setAssignments(prevAssignments => prevAssignments.filter(assignment => assignment.id !== id));
+      console.log(`Stub: Assignment with ID ${id} deleted successfully from local state.`);
+
+      // Simulate potential API error (uncomment to test error path)
+      // throw new Error('Simulated API deletion error.');
+
+    } catch (err) {
+      console.error(`Error deleting assignment ${id}:`, err);
+      setError(`Failed to delete assignment: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAssignments();
   }, []); 
@@ -81,6 +117,9 @@ const AssignmentsPage: React.FC = () => {
   return   (
         <section className="assignments-section section-card">
           <h2>Assignments</h2>
+
+          {error && <p className="error-message">{error}</p>} 
+          {isLoading && <p className="loading-message">Loading assignments...</p>} 
 
           {/* Form to Add New Assignment */}
           <h3 className="section-subtitle">Add New Assignment</h3>
@@ -105,12 +144,14 @@ const AssignmentsPage: React.FC = () => {
               onChange={(e) => setNewAssignmentDeadline(e.target.value)}
               required
             />
-            <button type="submit" className="btn btn-primary">Add Assignment</button>
+            <button type="submit" className="btn btn-primary add-assignment-btn" disabled={isLoading}>
+              {isLoading ? 'Adding...' : 'Add Assignment'}
+              </button>
           </form>
 
           {/* List of Existing Assignments */}
           <h3 className="section-subtitle">Your Assignments</h3>
-          {assignments.length === 0 ? (
+          {assignments.length === 0 && !isLoading ? (
             <p className="empty-message">No assignments recorded. Add one above!</p>
           ) : (
             <ul className="item-list">
@@ -121,6 +162,13 @@ const AssignmentsPage: React.FC = () => {
                     <span className="item-tag">{assignment.course}</span>
                   </div>
                   <p className="item-meta">Due: {assignment.deadline.split('T')[0]}</p>
+                  <button
+                onClick={() => handleDeleteAssignment(assignment.id)} 
+                className="btn btn-danger delete-btn" 
+                disabled={isLoading}
+              >
+                Delete
+              </button>
                 </li>
               ))}
             </ul>

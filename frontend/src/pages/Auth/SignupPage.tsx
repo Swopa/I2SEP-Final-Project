@@ -5,36 +5,28 @@ import { useAuth } from '../../context/AuthContext';
 import '../../App.css'; 
 
 const SignupPage: React.FC = () => {
-  const [email, setEmail] = useState<string>(''); // Explicitly type useState
-  const [password, setPassword] = useState<string>(''); // Explicitly type useState
-  const [isLoading, setIsLoading] = useState<boolean>(false); // State for loading indicator
-  const [error, setError] = useState<string | null>(null); // State for error messages
+  const [email, setEmail] = useState<string>(''); 
+  const [password, setPassword] = useState<string>(''); 
+  const [isLoading, setIsLoading] = useState<boolean>(false); 
+  const [error, setError] = useState<string | null>(null); 
 
-  const navigate = useNavigate(); // Get the navigate function
-  const { login: authContextLogin } = useAuth(); // Get the login function from AuthContext
+  const navigate = useNavigate();
+  const { login: authContextLogin } = useAuth(); 
 
-
-
-  // Placeholder submission handler (will be updated in a later task - B6)
+  
   const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault(); // Prevent default form submission
-    setError(null); // Clear previous errors
-    setIsLoading(true); // Set loading state
+    event.preventDefault(); 
+    setError(null); 
+    setIsLoading(true); 
 
     try {
-      // Call the stubbed signup function from authService
       const response = await signup(email, password);
 
       if (response.success && response.user && response.token) {
         console.log('Signup successful!', response.message);
-        // If signup is successful, also "log in" the user via the AuthContext
-        // For the stub, we just simulate the login effect.
-        // In a real app, successful signup might directly return a token to log in.
-        // For now, AuthContext's login stub will also set isAuthenticated.
-        // We pass the credentials even though authContextLogin is also a stub.
-        await authContextLogin(email, password); // Use the AuthContext's login stub
+        await authContextLogin(email, password); 
 
-        navigate('/dashboard'); // Redirect to dashboard on successful signup
+        navigate('/dashboard'); 
       } else {
         setError(response.message || 'Signup failed. Please try again.');
         console.error('Signup failed:', response.message);
@@ -43,7 +35,7 @@ const SignupPage: React.FC = () => {
       console.error('An unexpected error occurred during signup:', err);
       setError('An unexpected error occurred. Please try again later.');
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false); 
     }
   };
 
@@ -66,7 +58,7 @@ const SignupPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="form-input"
-              disabled={isLoading} // Disable inputs when loading
+              disabled={isLoading} 
             />
           </div>
 
@@ -80,11 +72,11 @@ const SignupPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="form-input"
-              disabled={isLoading} // Disable inputs when loading
+              disabled={isLoading}
             />
           </div>
 
-          {error && <p className="error-message">{error}</p>} {/* Display error message */}
+          {error && <p className="error-message">{error}</p>} 
 
           <button type="submit" className="btn btn-primary auth-btn" disabled={isLoading}>
             {isLoading ? 'Signing Up...' : 'Sign Up'}

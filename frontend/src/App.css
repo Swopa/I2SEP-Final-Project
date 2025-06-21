@@ -213,6 +213,38 @@ body {
   transform: translateY(0);
 }
 
+
+.btn-danger {
+  background-color: #f44336; /* Red color for danger actions */
+  color: #ffffff;
+  margin-top: var(--spacing-unit); /* Space from content above */
+  align-self: flex-end; /* Push button to the right */
+  padding: 8px 15px; /* Adjust padding for smaller button */
+  font-size: 0.9em;
+}
+
+.btn-danger:hover {
+  background-color: #d32f2f; /* Darker red on hover */
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+.add-assignment-btn, .add-note-btn {
+  width: 100%;
+  margin-top: var(--spacing-unit);
+  padding: calc(var(--spacing-unit) * 0.8) calc(var(--spacing-unit) * 1.5);
+  font-size: 1.1em;
+}
+
+button:disabled, input:disabled, textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
 /* --- Item Lists --- */
 .item-list {
   list-style: none;
@@ -228,6 +260,14 @@ body {
   margin-bottom: var(--spacing-unit);
   box-shadow: 0 2px 5px var(--shadow-color);
   transition: transform 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.item-card .item-header {
+  flex-grow: 1; /* Allow header to take space */
+  margin-bottom: var(--spacing-unit) / 2;
 }
 
 .item-card:hover {
@@ -386,11 +426,20 @@ body {
   text-decoration: underline;
 }
 
+.loading-message {
+  text-align: center;
+  color: var(--secondary-color);
+  font-weight: 500;
+  padding: var(--spacing-unit) / 2;
+  margin-top: var(--spacing-unit);
+}
+
 /* Error Message Style */
 .error-message {
   color: #d32f2f; /* A strong red */
   font-size: 0.9em;
-  margin-top: -10px; /* Pull it closer to the form */
+  margin-top: var(--spacing-unit) / 2; 
+  margin-bottom: var(--spacing-unit);
   text-align: center;
   background-color: rgba(211, 47, 47, 0.1); /* Light red background */
   padding: 8px;

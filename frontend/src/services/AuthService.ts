@@ -1,13 +1,11 @@
 
-// Define expected return types for clarity, even for stubs
 interface AuthResponse {
   success: boolean;
   message: string;
-  token?: string; // JWT token will be here in a real scenario
+  token?: string; 
   user?: {
     id: string;
     email: string;
-    // other user data
   };
 }
 

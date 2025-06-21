@@ -27,7 +27,6 @@ const LoginPage: React.FC = () => {
 
         navigate('/dashboard'); 
       } else {
-        // If login failed, set the error message
         setError(response.message || 'Login failed. Please check your credentials.');
         console.error('Login failed:', response.message);
       }
@@ -35,7 +34,7 @@ const LoginPage: React.FC = () => {
       console.error('An unexpected error occurred during login:', err);
       setError('An unexpected error occurred. Please try again later.');
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
@@ -56,7 +55,7 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="form-input"
-              disabled={isLoading} // Disable inputs when loading
+              disabled={isLoading} 
             />
           </div>
 
@@ -70,11 +69,11 @@ const LoginPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="form-input"
-              disabled={isLoading} // Disable inputs when loading
+              disabled={isLoading} 
             />
           </div>
 
-          {error && <p className="error-message">{error}</p>} {/* Display error message */}
+          {error && <p className="error-message">{error}</p>} 
 
           <button type="submit" className="btn btn-primary auth-btn" disabled={isLoading}>
             {isLoading ? 'Logging In...' : 'Log In'}
