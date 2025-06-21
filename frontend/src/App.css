@@ -474,12 +474,18 @@ body {
   text-decoration: underline;
 }
 
+/* Loading Message Style */
 .loading-message {
   text-align: center;
-  color: var(--secondary-color);
-  font-weight: 500;
-  padding: var(--spacing-unit) / 2;
-  margin-top: var(--spacing-unit);
+  color: var(--light-text-color);
+  padding: var(--spacing-unit);
+  font-style: italic;
+  animation: pulse 1.5s infinite alternate; /* Simple animation */
+}
+
+@keyframes pulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
 }
 
 /* Error Message Style */
