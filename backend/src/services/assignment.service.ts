@@ -60,3 +60,24 @@ export const createAssignmentDb = (
     );
   });
 };
+
+/**
+ * Retrieves all assignments for a specific user, ordered by due date.
+ * @param db The SQLite database connection instance.
+ * @param userId The ID of the user whose assignments are to be retrieved.
+ * @returns A promise that resolves to an array of Assignment objects.
+ */
+export const getAssignmentsByUserIdDb = (db: sqlite3.Database, userId: string): Promise<Assignment[]> => {
+  return new Promise((resolve, reject) => {
+    // Order by dueDate, then by createdAt for consistent ordering
+    const sql = "SELECT * FROM assignments WHERE userId = ? ORDER BY dueDate ASC, createdAt ASC";
+    db.all(sql, [userId], (err, rows: Assignment[]) => {
+      if (err) {
+        console.error('Error fetching assignments by userId from DB:', err.message);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
