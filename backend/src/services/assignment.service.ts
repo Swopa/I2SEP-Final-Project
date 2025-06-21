@@ -1,7 +1,7 @@
 // backend/src/services/assignment.service.ts
 import sqlite3 from 'sqlite3';
 import { v4 as uuidv4 } from 'uuid';
-import { Assignment, NewAssignmentData } from '../models/assignment.model';
+import { Assignment, NewAssignmentData, UpdateAssignmentData } from '../models/assignment.model';
 
 /**
  * Creates a new assignment in the database for a specific user.
@@ -81,3 +81,95 @@ export const getAssignmentsByUserIdDb = (db: sqlite3.Database, userId: string): 
     });
   });
 };
+
+/**
+ * Updates an existing assignment for a specific user.
+ * Only updates fields that are provided in assignmentData.
+ * @param db The SQLite database connection instance.
+ * @param assignmentId The ID of the assignment to update.
+ * @param userId The ID of the user who owns the assignment.
+ * @param assignmentData An object containing the fields to update.
+ * @returns A promise that resolves to the updated Assignment object if successful, or null if not found/not owned or no changes.
+ */
+export const updateAssignmentDb = (
+  db: sqlite3.Database,
+  assignmentId: string,
+  userId: string,
+  assignmentData: UpdateAssignmentData
+): Promise<Assignment | null> => {
+  return new Promise(async (resolve, reject) => { // Made async to use await for getAssignmentByIdAndUserIdDb
+    // Fields that can be updated
+    const updatableFields: (keyof UpdateAssignmentData)[] = [
+      'title', 'description', 'dueDate', 'courseTitle', 'status'
+    ];
+    const fieldsToUpdate: string[] = [];
+    const valuesToUpdate: (string | undefined | null)[] = [];
+
+    for (const field of updatableFields) {
+      if (assignmentData[field] !== undefined) {
+        fieldsToUpdate.push(`${field} = ?`);
+        valuesToUpdate.push(assignmentData[field]);
+      }
+    }
+
+    // Always update 'updatedAt' if any other field is being updated
+    if (fieldsToUpdate.length === 0) {
+      // No actual fields to update, perhaps just return the existing assignment or indicate no change
+      // For now, let's consider this as "no effective update performed" by fetching and returning
+      try {
+        const existingAssignment = await getAssignmentByIdAndUserIdDb(db, assignmentId, userId); // We'll define this in C8
+        return resolve(existingAssignment); // Or resolve(null) if no change means no "update"
+      } catch (fetchError) {
+        return reject(fetchError);
+      }
+    }
+
+    fieldsToUpdate.push('updatedAt = ?');
+    valuesToUpdate.push(new Date().toISOString());
+
+    const sqlSetClause = fieldsToUpdate.join(', ');
+    const sql = `UPDATE assignments SET ${sqlSetClause} WHERE id = ? AND userId = ?`;
+    const finalValues = [...valuesToUpdate, assignmentId, userId];
+
+    db.run(sql, finalValues, async function (err) { // Made async for re-fetch
+      if (err) {
+        console.error('Error updating assignment in DB:', err.message);
+        reject(err);
+      } else {
+        if (this.changes === 0) {
+          resolve(null); // No rows updated (not found or not owned)
+        } else {
+          // Fetch and return the updated assignment
+          try {
+            const updatedAssignment = await getAssignmentByIdAndUserIdDb(db, assignmentId, userId); // We'll define this in C8
+            resolve(updatedAssignment);
+          } catch (fetchError) {
+            reject(fetchError);
+          }
+        }
+      }
+    });
+  });
+};
+
+export const getAssignmentByIdAndUserIdDb = (
+    db: sqlite3.Database,
+  assignmentId: string,
+  userId: string
+): Promise<Assignment | null> => {
+  return new Promise((resolve, reject) => {
+    const sql = "SELECT * FROM assignments WHERE id = ? AND userId = ?";
+    db.get(sql, [assignmentId, userId], (err, row: Assignment | undefined) => {
+      if (err) {
+        console.error('Error fetching assignment by id and userId from DB:', err.message);
+        reject(err);
+      } else {
+        if (!row) {
+          resolve(null); // Not found or not owned
+        } else {
+          resolve(row);
+        }
+      }
+    });
+  });
+}
