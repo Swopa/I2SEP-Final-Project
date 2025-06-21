@@ -25,12 +25,23 @@ import {
   closeDbConnection,
   initializeUserTable,
   initializeCourseTable,
-  initializeAssignmentTable,
+  initializeAssignmentTable
 } from "./database";
 
 // Assignment related imports
-import { Assignment, NewAssignmentData } from './models/assignment.model';
-import { createAssignmentDb, getAssignmentsByUserIdDb } from './services/assignment.service';
+import { 
+  Assignment, 
+  NewAssignmentData, 
+  UpdateAssignmentData 
+} from './models/assignment.model';
+
+import { 
+  createAssignmentDb, 
+  getAssignmentsByUserIdDb,
+  updateAssignmentDb,
+  deleteAssignmentDb,
+  getAssignmentByIdAndUserIdDb 
+} from './services/assignment.service';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -469,6 +480,43 @@ app.get('/assignments', authenticateToken, async (req: Request, res: Response) =
   }
 });
 
+
+
+// PUT /assignments/:assignmentId - Update a specific assignment for the authenticated user
+app.put('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { assignmentId } = req.params;
+    const assignmentData = req.body as UpdateAssignmentData; // Data to update
+    const userId = req.user.userId;
+
+    // Basic validation: ensure at least one updatable field is provided if your model allows partial updates
+    // Or, if specific fields are always required for an update, validate them here.
+    // For example, if title is always required even on update:
+    // if (assignmentData.title !== undefined && (typeof assignmentData.title !== 'string' || assignmentData.title.trim() === '')) {
+    //   return res.status(400).json({ message: 'If title is provided for update, it must be a non-empty string.' });
+    // }
+    // if (assignmentData.dueDate !== undefined && (typeof assignmentData.dueDate !== 'string' /* || !isValidISODate(assignmentData.dueDate) */ )) {
+    //    return res.status(400).json({ message: 'If dueDate is provided for update, it must be a valid ISO date string.' });
+    // }
+
+
+    const updatedAssignment = await updateAssignmentDb(db, assignmentId, userId, assignmentData);
+
+    if (!updatedAssignment) {
+      return res.status(404).json({ message: 'Assignment not found, access denied, or no changes made.' });
+    }
+
+    res.status(200).json(updatedAssignment);
+
+  } catch (error) {
+    console.error(`Error updating assignment ${req.params.assignmentId}:`, error);
+    res.status(500).json({ message: 'Failed to update assignment.' });
+  }
+});
+
 // TODO: Note endpoints (to be re-implemented by Dev C using 'db')
 /*
 app.get('/notes', (req: Request, res: Response) => {
@@ -517,6 +565,7 @@ const startServer = async () => {
       console.log("  GET  /courses (Protected)");
       console.log('  POST /assignments (Protected)');
       console.log('  GET  /assignments (Protected)');
+      console.log('  PUT  /assignments/:assignmentId (Protected)');
       // Add other routes to this log as they become functional
     });
 
