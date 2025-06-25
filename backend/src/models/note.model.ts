@@ -1,15 +1,9 @@
-// backend/src/models/note.model.ts
 export interface Note {
-  id: string;
-  userId: string;     // Essential for user association
-  course?: string;    // Optional: Name of the course (was courseTitle)
-  title: string;
-  content: string;
-  link?: string;      // Optional: A URL link
-  createdAt: string;
-  // No 'tags' in this new structure
+  id: string;         // Unique identifier
+  course: string;     // Associated course
+  title: string;      // Title of the note
+  content: string;    // Main content of the note
+  link?: string;      // Optional link (e.g., to a resource, Drive doc, etc.)
+  createdAt: string;  // ISO date string for when the note was created
+  // updatedAt?: string; // Optional: ISO date string for last update
 }
-
-// Data needed from the client to create or update a new note.
-// Title and content are required. Course and link are optional.
-export type NoteDataPayload = Pick<Note, 'title' | 'content'> & Partial<Pick<Note, 'course' | 'link'>>;

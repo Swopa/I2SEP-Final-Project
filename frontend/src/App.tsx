@@ -16,18 +16,9 @@ function App() {
   const { isAuthenticated, user, login, logout } = useAuth();
   const navigate = useNavigate();
 
-  // --- Temporary Test Buttons/Display ---
-  const handleTestLogin = async () => {
-    await login('test@example.com', 'password123');
-    navigate('/dashboard');
-  };
 
-  const handleTestLogout = () => {
-    logout();
-    navigate('/login');
-  };
-  // --- End Temporary Test ---
 
+ 
   return (
     <div className="App">
       <header className="app-header">
@@ -38,14 +29,10 @@ function App() {
           <p className="app-tagline">Your personal dashboard for schoolwork & notes.</p>
           <div style={{ marginTop: '10px', fontSize: '0.9em', color: 'rgba(255,255,255,0.9)' }}>
             {isAuthenticated ? (
-              <>
-                Logged in as: {user?.email}
-                <button onClick={handleTestLogout} className="btn-inline">Logout</button> 
-              </>
+              <span>Logged in as: {user?.email}</span>
             ) : (
               <>
-                Not logged in
-                <button onClick={handleTestLogin} className="btn-inline">Test Login</button> 
+                <span>Not logged in</span>
               </>
             )}
           </div>

@@ -1,9 +1,17 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom'; 
+import { Link, useLocation, useNavigate} from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; 
 import '../App.css'; 
 
 const Sidebar: React.FC = () => {
   const location = useLocation(); 
+  const { logout } = useAuth(); // Get the logout function from AuthContext
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout(); // Call the logout function from the AuthContext
+    navigate('/login'); // Redirect to the login page after logout
+  };
 
   return (
     <nav className="sidebar">
@@ -28,8 +36,12 @@ const Sidebar: React.FC = () => {
             Courses
           </Link>
         </li>
+        <li className="sidebar-nav-item sidebar-logout-item"> {/* Added a class for specific styling */}
+          <button onClick={handleLogout} className="sidebar-logout-btn">
+            Logout
+          </button>
+        </li>
       </ul>
-      {/* You can add a logout link here later if it's part of the sidebar */}
     </nav>
   );
 };

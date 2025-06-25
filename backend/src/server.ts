@@ -11,7 +11,6 @@ import { findUserByEmail, createUser } from "./services/user.service"; // Import
 import { v4 as uuidv4 } from "uuid";
 import { authenticateToken } from "./middleware/auth.middleware";
 import { Course, NewCourseData } from "./models/course.model";
-import { Note, NoteDataPayload } from './models/note.model';
 import {
   createCourseDb,
   getCoursesByUserIdDb,
@@ -20,16 +19,29 @@ import {
   deleteCourseDb,
 } from "./services/course.service";
 
-import {createNoteDb, getNotesByUserIdDb,} from "./services/note.service"
-
 // Database related imports
 import {
   getDbConnection,
   closeDbConnection,
   initializeUserTable,
   initializeCourseTable,
-  initializeNoteTable,
+  initializeAssignmentTable
 } from "./database";
+
+// Assignment related imports
+import { 
+  Assignment, 
+  NewAssignmentData, 
+  UpdateAssignmentData 
+} from './models/assignment.model';
+
+import { 
+  createAssignmentDb, 
+  getAssignmentsByUserIdDb,
+  updateAssignmentDb,
+  deleteAssignmentDb,
+  getAssignmentByIdAndUserIdDb 
+} from './services/assignment.service';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -78,10 +90,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     ...( !isProduction && { stack: err.stack } )
   });
 });
-
-
-
-
 
 // --- Database Instance ---
 // This will hold our database connection instance once initialized.
@@ -407,65 +415,152 @@ app.delete('/courses/:courseId', authenticateToken, async (req: Request, res: Re
 });
 
 
-//-----Note endpoint
+// +++ Assignment API Endpoints +++
 
-//POST
-app.post('/notes', authenticateToken, async (req: Request, res: Response) => {
-  if (!db || !req.user) {
-    return res.status(503).json({ message: 'Server or user session error.' });
-  }
+// POST /assignments - Create a new assignment for the authenticated user
+app.post('/assignments', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
   try {
-    // Expecting title, content, and optionally course, link from req.body
-    const noteData = req.body as NoteDataPayload;
+    const assignmentData = req.body as NewAssignmentData;
+    const userId = req.user.userId;
 
-    if (!noteData.title || !noteData.content) {
-      return res.status(400).json({ message: 'Title and content are required for a note.' });
+    // Basic Validation
+    if (!assignmentData.title || typeof assignmentData.title !== 'string' || assignmentData.title.trim() === '') {
+      return res.status(400).json({ message: 'Assignment title is required.' });
     }
-    // Optional: Add validation for 'link' if present (e.g., is it a valid URL format?)
-    // Optional: Add validation for 'course' if present (e.g., string length)
+    if (!assignmentData.dueDate || typeof assignmentData.dueDate !== 'string') { // Basic check
+      return res.status(400).json({ message: 'Assignment dueDate is required and must be a string.' });
+    }
+    // Optional: More robust ISO date validation for dueDate
+    // const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/; // Example, adjust for milliseconds
+    // if (!isoDatePattern.test(assignmentData.dueDate)) {
+    //   return res.status(400).json({ message: 'dueDate must be a valid ISO 8601 date string (e.g., "YYYY-MM-DDTHH:mm:ss.sssZ").' });
+    // }
 
-    const newNote = await createNoteDb(db, req.user.userId, noteData);
-    res.status(201).json(newNote);
+
+    // Ensure default status if not provided, matching NewAssignmentData and Assignment interface
+    const dataToSave: NewAssignmentData & { status?: Assignment['status'] } = {
+        ...assignmentData,
+        status: assignmentData.status || 'pending'
+    };
+
+
+    const newAssignment = await createAssignmentDb(db, userId, dataToSave as NewAssignmentData); // Cast if needed after adding status
+
+    res.status(201).json(newAssignment);
+
   } catch (error) {
-    console.error("Error creating note:", error);
+    console.error('Error creating assignment:', error);
     if (error instanceof Error) {
-        res.status(500).json({ message: "Failed to create note.", error: error.message });
+        res.status(500).json({ message: 'Failed to create assignment.', error: error.message });
     } else {
-        res.status(500).json({ message: "Failed to create note due to an unknown error." });
+        res.status(500).json({ message: 'An unknown error occurred while creating the assignment.' });
     }
   }
 });
 
-app.get('/notes', authenticateToken, async (req: Request, res: Response) => {
-  if (!db || !req.user) {
-    return res.status(503).json({ message: 'Server or user session error.' });
-  }
+// GET /assignments - Retrieve all assignments for the authenticated user
+app.get('/assignments', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
   try {
-    const userNotes = await getNotesByUserIdDb(db, req.user.userId);
-    res.status(200).json(userNotes);
+    const userId = req.user.userId;
+    const userAssignments = await getAssignmentsByUserIdDb(db, userId);
+    res.status(200).json(userAssignments);
   } catch (error) {
-    console.error("Error fetching notes:", error);
+    console.error('Error fetching assignments:', error);
     if (error instanceof Error) {
-        res.status(500).json({ message: "Failed to fetch notes.", error: error.message });
+        res.status(500).json({ message: 'Failed to fetch assignments.', error: error.message });
     } else {
-        res.status(500).json({ message: "Failed to fetch notes due to an unknown error." });
+        res.status(500).json({ message: 'An unknown error occurred while fetching assignments.' });
     }
   }
 });
 
+// GET /assignments/:assignmentId - Retrieve a specific assignment for the authenticated user
+app.get('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
 
-// TODO: Assignment endpoints (to be re-implemented using 'db')
-/*
-app.get('/assignments', (req: Request, res: Response) => {
-  // Example: if (!db) return res.status(503).send('Database not ready');
-  // db.all("SELECT * FROM assignments WHERE userId = ?", [req.user.id], (err, rows) => {...});
-  res.status(501).json({ message: 'Assignments GET Not Implemented with DB yet' });
+  try {
+    const { assignmentId } = req.params;
+    const userId = req.user.userId;
+
+    const assignment = await getAssignmentByIdAndUserIdDb(db, assignmentId, userId);
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found or access denied.' });
+    }
+
+    res.status(200).json(assignment);
+
+  } catch (error) {
+    console.error(`Error fetching assignment ${req.params.assignmentId}:`, error);
+    // Generic error response
+    res.status(500).json({ message: 'Failed to fetch assignment.' });
+  }
 });
 
-app.post('/assignments', async (req: Request, res: Response) => {
-  res.status(501).json({ message: 'Assignments POST Not Implemented with DB yet' });
+// PUT /assignments/:assignmentId - Update a specific assignment for the authenticated user
+app.put('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { assignmentId } = req.params;
+    const assignmentData = req.body as UpdateAssignmentData; // Data to update
+    const userId = req.user.userId;
+
+    // Basic validation: ensure at least one updatable field is provided if your model allows partial updates
+    // Or, if specific fields are always required for an update, validate them here.
+    // For example, if title is always required even on update:
+    // if (assignmentData.title !== undefined && (typeof assignmentData.title !== 'string' || assignmentData.title.trim() === '')) {
+    //   return res.status(400).json({ message: 'If title is provided for update, it must be a non-empty string.' });
+    // }
+    // if (assignmentData.dueDate !== undefined && (typeof assignmentData.dueDate !== 'string' /* || !isValidISODate(assignmentData.dueDate) */ )) {
+    //    return res.status(400).json({ message: 'If dueDate is provided for update, it must be a valid ISO date string.' });
+    // }
+
+
+    const updatedAssignment = await updateAssignmentDb(db, assignmentId, userId, assignmentData);
+
+    if (!updatedAssignment) {
+      return res.status(404).json({ message: 'Assignment not found, access denied, or no changes made.' });
+    }
+
+    res.status(200).json(updatedAssignment);
+
+  } catch (error) {
+    console.error(`Error updating assignment ${req.params.assignmentId}:`, error);
+    res.status(500).json({ message: 'Failed to update assignment.' });
+  }
 });
-*/
+
+// DELETE /assignments/:assignmentId - Delete a specific assignment for the authenticated user
+app.delete('/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+  if (!db) { return res.status(503).json({ message: 'Database service unavailable.' }); }
+  if (!req.user) { return res.status(401).json({ message: 'Unauthorized.' }); }
+
+  try {
+    const { assignmentId } = req.params;
+    const userId = req.user.userId;
+
+    const wasDeleted = await deleteAssignmentDb(db, assignmentId, userId);
+
+    if (!wasDeleted) {
+      return res.status(404).json({ message: 'Assignment not found or access denied.' });
+    }
+
+    res.status(204).send(); // 204 No Content for successful DELETE
+
+  } catch (error) {
+    console.error(`Error deleting assignment ${req.params.assignmentId}:`, error);
+    res.status(500).json({ message: 'Failed to delete assignment.' });
+  }
+});
 
 // TODO: Note endpoints (to be re-implemented by Dev C using 'db')
 /*
@@ -496,10 +591,7 @@ const startServer = async () => {
     //    The 'db' variable is guaranteed to be non-null here.
     await initializeUserTable(db);
     await initializeCourseTable(db);
-    await initializeNoteTable(db);
-    // TODO (in later tasks):
-    // await initializeCourseTable(db);
-    // await initializeAssignmentTable(db);
+    await initializeAssignmentTable(db);
     // await initializeNoteTable(db);
     console.log(
       "Database schema initialization routines completed (User table checked/created)."
@@ -514,6 +606,11 @@ const startServer = async () => {
       console.log("  POST /auth/login");
       console.log("  POST /courses (Protected)");
       console.log("  GET  /courses (Protected)");
+      console.log('  POST /assignments (Protected)');
+      console.log('  GET  /assignments (Protected)');
+      console.log('  GET  /assignments/:assignmentId (Protected)');
+      console.log('  PUT  /assignments/:assignmentId (Protected)');
+      console.log('  DELETE /assignments/:assignmentId (Protected)');
       // Add other routes to this log as they become functional
     });
 

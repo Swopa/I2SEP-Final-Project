@@ -87,12 +87,16 @@ body {
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 10px var(--shadow-color);
   padding: var(--spacing-unit);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; 
 }
 
 .sidebar-nav-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1;
 }
 
 .sidebar-nav-item {
@@ -123,6 +127,27 @@ body {
 .sidebar-nav-link.active:hover { /* Override hover for active link */
   background-color: var(--primary-dark-color);
   color: #ffffff;
+}
+
+sidebar-logout-item {
+  margin-top: var(--spacing-unit); /* Add some space above the logout button */
+}
+
+.sidebar-logout-btn {
+  width: 100%; /* Make the button span the full width of the sidebar */
+  background-color: #f44336; /* Red color for logout */
+  color: white;
+  border: none;
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.25);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1em;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.sidebar-logout-btn:hover {
+  background-color: #d32f2f; /* Darker red on hover */
 }
 
 .section-card {

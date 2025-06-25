@@ -100,42 +100,54 @@ export const initializeCourseTable = (db: sqlite3.Database): Promise<void> => {
 
     db.run(sql, (err) => {
       if (err) {
-        console.error("Error creating courses table", err.message);
+        console.error('Error creating courses table', err.message);
         reject(err);
       } else {
-        console.log("Courses table checked/created successfully.");
+        console.log('Courses table checked/created successfully.');
         resolve();
       }
     });
   });
 };
 
-// backend/src/database.ts
-// ...
-export const initializeNoteTable = (db: sqlite3.Database): Promise<void> => {
+// NEW FUNCTION: Initialize Assignment Table
+export const initializeAssignmentTable = (db: sqlite3.Database): Promise<void> => {
   return new Promise((resolve, reject) => {
     const sql = `
-      CREATE TABLE IF NOT EXISTS notes (
+      CREATE TABLE IF NOT EXISTS assignments (
         id TEXT PRIMARY KEY,
         userId TEXT NOT NULL,
         title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        course TEXT,          -- Changed from c ourseTitle, optional
-        link TEXT,            -- Added link, optional
+        description TEXT,
+        dueDate TEXT NOT NULL,    -- Store as ISO8601 string
+        courseTitle TEXT,         -- Or courseId TEXT if linking to a courses table
+        status TEXT NOT NULL DEFAULT 'pending', -- Default status
         createdAt TEXT NOT NULL,
+        updatedAt TEXT,           -- Can be updated on modification
         FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
       );
-    `; // Removed 'tags' column
-    console.log("Attempting to create/check notes table..."); // <--- ADD THIS
-    db.run(sql, (err) => {
-      if (err) {
-        console.error("SQLITE ERROR while creating notes table:", err.message); // <--- MODIFIED LOG
-        reject(err);
-      } else {
-        console.log("SQLITE SUCCESS: Notes table operation completed."); // <--- MODIFIED LOG
-        resolve();
-      }
+    `;
+    // Consider adding an index on userId for faster lookups of a user's assignments
+    // const createIndexSql = `CREATE INDEX IF NOT EXISTS idx_assignments_userId ON assignments(userId);`;
+
+    db.serialize(() => { // Use serialize to run statements in order
+        db.run(sql, (err) => {
+            if (err) {
+                console.error('Error creating assignments table:', err.message);
+                return reject(err); // Stop if table creation fails
+            }
+            console.log('Assignments table checked/created successfully.');
+            // db.run(createIndexSql, (indexErr) => { // Optional: Create index
+            //     if (indexErr) {
+            //         console.error('Error creating index on assignments.userId:', indexErr.message);
+            //         // Don't necessarily reject if index creation fails, but log it
+            //     } else {
+            //         console.log('Index on assignments.userId checked/created.');
+            //     }
+            //     resolve();
+            // });
+            resolve(); // Resolve after table creation if not adding index or handle index separately
+        });
     });
   });
 };
-// ...
