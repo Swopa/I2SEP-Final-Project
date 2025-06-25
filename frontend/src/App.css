@@ -599,6 +599,51 @@ sidebar-logout-item {
   border: 1px solid #d32f2f;
 }
 
+.dashboard-section {
+    flex: 1 1 100%; /* Dashboard takes full width of content area */
+    max-width: 900px; /* Optional: limit dashboard width for very wide screens */
+    margin: 0 auto; /* Center dashboard if max-width is applied */
+}
+
+.dashboard-summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing-unit) * 1.5); /* Gap between summary cards */
+    margin-top: calc(var(--spacing-unit) * 1.5);
+}
+
+.summary-card {
+    flex: 1 1 calc(50% - var(--spacing-unit) * 0.75); /* Two columns */
+    background-color: var(--background-color); /* Lighter background for summaries within dashboard */
+    padding: var(--spacing-unit);
+    border-radius: var(--border-radius-md);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05); /* Subtle inner shadow */
+    border: 1px solid var(--border-color);
+}
+
+.summary-card h3 {
+    font-size: 1.2em;
+    color: var(--secondary-color);
+    margin-bottom: var(--spacing-unit);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-unit) / 2;
+}
+
+.summary-list {
+    list-style: none;
+    padding: 0;
+}
+
+.summary-list li {
+    margin-bottom: var(--spacing-unit) / 2;
+    padding-left: 10px;
+    border-left: 3px solid var(--primary-color); /* Little accent bar */
+}
+
+.summary-list li:last-child {
+    margin-bottom: 0;
+}
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
   .main-content {
@@ -616,5 +661,11 @@ sidebar-logout-item {
 
   .app-tagline {
     font-size: 1em;
+  }
+  dashboard-summary-grid {
+    flex-direction: column; /* Stack summary cards on small screens */
+  }
+  .summary-card {
+    flex: 1 1 100%; /* Full width for summary cards on small screens */
   }
 }
