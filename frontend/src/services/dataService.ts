@@ -1,6 +1,6 @@
 // frontend/src/services/dataService.ts
 
-import type { Assignment, Note } from '../types'; // Import your shared types
+import type { Assignment, Note, Course } from '../types'; // Import your shared types
 
 // Utility to simulate network delay
 const simulateDelay = (ms: number = 500) => new Promise(resolve => setTimeout(resolve, ms));
@@ -44,6 +44,8 @@ export const getDashboardNotesSummary = async (): Promise<Note[]> => {
   console.log('DataService Stub: Fetching dashboard notes summary...');
   await simulateDelay();
 
+  
+
   // Return dummy data
   return [
     {
@@ -63,5 +65,39 @@ export const getDashboardNotesSummary = async (): Promise<Note[]> => {
       createdAt: '2025-05-28T14:30:00.000Z',
       userId: 'dummy_user_id'
     },
+  ];
+
+  
+};
+
+export const getCourses = async (): Promise<Course[]> => {
+  console.log('DataService Stub: Fetching courses...');
+  await simulateDelay();
+
+return [
+    {
+      id: 'course-1',
+      userId: 'user-abc', // Dummy user ID
+      title: 'Introduction to Programming (COMP 101)',
+      createdAt: '2025-01-10T09:00:00.000Z',
+    },
+    {
+      id: 'course-2',
+      userId: 'user-abc',
+      title: 'Calculus I (MATH 202)',
+      createdAt: '2025-01-15T10:30:00.000Z',
+    },
+    {
+      id: 'course-3',
+      userId: 'user-xyz', // Another dummy user ID, just for example
+      title: 'World History Since 1500 (HIST 301)',
+      createdAt: '2025-02-01T11:00:00.000Z',
+    },
+    {
+      id: 'course-4',
+      userId: 'user-abc',
+      title: 'Principles of Biology (BIO 101)',
+      createdAt: '2025-02-05T13:00:00.000Z',
+    }
   ];
 };

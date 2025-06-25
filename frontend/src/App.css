@@ -464,6 +464,13 @@ sidebar-logout-item {
   text-decoration: underline;
 }
 
+.course-card .item-tag {
+    background-color: var(--accent-color); /* Use a different color for course tags */
+}
+.course-card .item-header {
+    margin-bottom: var(--spacing-unit); /* More space below course header */
+}
+
 /* --- Empty Messages --- */
 .empty-message {
   text-align: center;
