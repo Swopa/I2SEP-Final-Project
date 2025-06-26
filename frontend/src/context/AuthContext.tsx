@@ -13,7 +13,8 @@ interface AuthContextType {
   isAuthenticated: boolean; // Indicates if a user is logged in
   user: User | null;      // The logged-in user's data
   login: (email: string, password: string) => Promise<boolean>; // Placeholder login function
-  logout: () => void;     // Placeholder logout function
+  logout: () => void; 
+  isLoadingAuth: boolean;
   // isLoadingAuth: boolean
 }
 
@@ -34,22 +35,31 @@ interface AuthProviderProps {
 
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Starts as false
-  const [user, setUser] = useState<User | null>(null); // No user initially
+  const [user, setUser] = useState<User | null>(null); 
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
   useEffect(() => {
-    // setIsLoadingAuth(true); // Set loading true
-    const storedToken = getToken(); 
-    if (storedToken) {
-      // For the stub, we just assume a token means authenticated
-      setIsAuthenticated(true);
-      setUser({ id: 'persisted-user', email: 'persisted@example.com' }); // Dummy user for persisted session
-      console.log('AuthContext: User authenticated from persisted token.');
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-      console.log('AuthContext: No persisted token found.');
-    }
-    // setIsLoadingAuth(false); // Set loading false
+    const checkAuthStatus = async () => { // Made async to simulate potential async token validation later
+      setIsLoadingAuth(true); // Ensure loading is true at start
+      const storedToken = getToken();
+
+      if (storedToken) {
+        // In a real app, you'd decode/validate the token on the backend or frontend.
+        // For now, if a token exists, we consider it authenticated.
+        setIsAuthenticated(true);
+        // Using a placeholder user. Later, you might decode user info from the token.
+        // Or make a call to a /me endpoint to get the user's current profile from backend.
+        setUser({ id: 'persisted-user-id', email: 'persisted@example.com' });
+        console.log('AuthContext: User authenticated from persisted token.');
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+        console.log('AuthContext: No persisted token found.');
+      }
+      setIsLoadingAuth(false); // <--- Set loading to false once check is complete
+    };
+
+    checkAuthStatus();
   }, []); 
 
  
@@ -84,6 +94,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
+    isLoadingAuth,
   };
 
   return (

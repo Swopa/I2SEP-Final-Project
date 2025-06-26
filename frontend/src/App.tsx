@@ -4,6 +4,9 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar'; 
 import ProtectedRoute from './components/ProtectedRoute';
+import LoadingOverlay from './components/LoadingOverlay'; 
+import { useLoading } from './context/LoadingContext';
+import { useApiClientContext } from './utils/apiClient';
 
 import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
@@ -13,7 +16,9 @@ import NotesPage from './pages/NotesPage';
 import CoursesPage from './pages/CoursesPage';
 
 function App() {
+  useApiClientContext();
   const { isAuthenticated, user, login, logout } = useAuth();
+  const { isLoading: isGlobalLoading } = useLoading();
   const navigate = useNavigate();
 
 
@@ -67,6 +72,7 @@ function App() {
           <p>© {new Date().getFullYear()} Academic Hub. All rights reserved.</p>
         </div>
       </footer>
+      <LoadingOverlay isLoading={isGlobalLoading} />
     </div>
   );
 }
