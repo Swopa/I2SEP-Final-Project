@@ -78,43 +78,6 @@ This project is built with a modern full-stack JavaScript/TypeScript approach:
 
 The repository is organized into two main directories: `frontend` and `backend`.
 
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Markdown
-IGNORE_WHEN_COPYING_END
-
-academic-organizer/
-├── frontend/
-│ ├── public/ # Static assets (like favicon.ico)
-│ ├── src/
-│ │ ├── components/ # Reusable UI components (e.g., Sidebar, Modals, LoadingOverlay, Toast)
-│ │ ├── context/ # React Contexts (AuthContext, LoadingContext, ToastContext)
-│ │ ├── pages/ # Main application views/pages (e.g., LoginPage, AssignmentsPage)
-│ │ │ └── Auth/ # Authentication-specific pages
-│ │ ├── services/ # Frontend API service modules (authService, assignmentService, dataService, noteService)
-│ │ ├── utils/ # Utility functions (tokenStorage, apiClient)
-│ │ ├── App.css # Global and component-specific styles
-│ │ ├── App.tsx # Main application component and routing logic
-│ │ ├── index.css # Minimal global CSS reset (should be nearly empty)
-│ │ ├── main.tsx # Entry point for React application
-│ │ └── types.ts # Shared TypeScript interfaces for frontend data models
-│ ├── package.json # Frontend dependencies and scripts
-│ └── tsconfig.json # TypeScript configuration for frontend
-│
-└── backend/
-├── src/
-│ ├── database.ts # SQLite database connection and table initialization
-│ ├── models/ # TypeScript interfaces for database entities (User, Assignment, Note, Course)
-│ ├── middleware/ # Express middleware (e.g., authentication)
-│ ├── services/ # Business logic and database interaction functions
-│ ├── utils/ # Utility functions (auth, password hashing, JWT generation)
-│ └── server.ts # Main Express server setup and API routes
-├── data/ # Directory where SQLite database file (e.g., app.db) will be stored
-├── .env.example # Example environment variables file
-├── package.json # Backend dependencies and scripts
-└── tsconfig.json # TypeScript configuration for backend
-Generated code
 
       
 ## Getting Started
@@ -134,133 +97,59 @@ First, clone the project repository from GitHub:
 git clone <repository_url>
 cd academic-organizer
 
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution.
-IGNORE_WHEN_COPYING_END
 Backend Setup
 
     Navigate to the backend directory:
-    Generated bash
-
-          
     cd backend
 
-        
-
-    IGNORE_WHEN_COPYING_START
-
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
 
 Install dependencies:
-Generated bash
-
-      
 npm install
-
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
 
 Create .env file:
 Create a file named .env in the backend/ directory. This file will store your environment variables. You can copy the content from .env.example:
-Generated bash
-
-      
+ 
 cp .env.example .env
-
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
 Then open .env and set your JWT_SECRET. This should be a strong, random string. You can use an online generator or create one manually.
-Generated dotenv
 
       
 # backend/.env
 PORT=3001
 JWT_SECRET="your_very_strong_and_random_jwt_secret_key_here"
-
-    
-
-IGNORE_WHEN_COPYING_START
-
-    Use code with caution. Dotenv
-    IGNORE_WHEN_COPYING_END
+    Use code with caution. 
 
     Initialize Database (on first run):
     The backend will automatically create the data/app.db file and initialize tables (users, courses, assignments) when the server starts for the first time.
 
 Frontend Setup
 
-    Navigate to the frontend directory:
-    Generated bash
-
-          
+    Navigate to the frontend directory:          
     cd ../frontend
 
-        
-
-    IGNORE_WHEN_COPYING_START
-
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
 
 Install dependencies:
-Generated bash
-
-      
 npm install
-
-    
-
-IGNORE_WHEN_COPYING_START
-
-    Use code with caution. Bash
-    IGNORE_WHEN_COPYING_END
 
 Running the Application
 
     Start the Backend Server:
     Open a new terminal window (keep the current one for the frontend).
-    Navigate to the backend directory:
-    Generated bash
-
+    Navigate to the backend directory.
           
     cd academic-organizer/backend
     npm run dev
 
-        
-
-    IGNORE_WHEN_COPYING_START
-
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
 
 You should see output indicating the server is running on http://localhost:3001.
 
 Start the Frontend Development Server:
 In your original terminal window (where you installed frontend dependencies), run:
 Generated bash
-
       
 npm run dev
 
-    
-
-IGNORE_WHEN_COPYING_START
-
-    Use code with caution. Bash
-    IGNORE_WHEN_COPYING_END
-
     This will start the React development server, usually on http://localhost:5173. Your browser should automatically open to this address.
-
+```
 Usage
 
     Signup:
